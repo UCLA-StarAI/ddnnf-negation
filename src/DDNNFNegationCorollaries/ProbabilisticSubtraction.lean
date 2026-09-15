@@ -9,8 +9,9 @@ import TutorialBox
 # Probabilistic circuit subtraction
 
 The uniform distribution on the complement of the hard function has
-a small representation with one subtraction from a constant. Every
-nonnegative decomposable probabilistic circuit for it is large.
+a small structured-decomposable representation with one subtraction from
+a constant. The upper circuit follows one variable order. Every nonnegative
+decomposable probabilistic circuit for the distribution is large.
 -/
 
 namespace DDNNFNegation
@@ -105,10 +106,11 @@ theorem condProb_uniform (h : ∃ x, ¬hardFunction ranks hn a x) (x : Fin (enco
   · simp
   · field_simp
 
-/-- A uniform complement distribution has a representation of size
-`2^{O(n)}` with one subtraction from a constant and positive normalization.
-Every nonnegative decomposable probabilistic circuit for that distribution
-has size `2^{Ω(n²)}`. -/
+/-- A uniform complement distribution has a structured-decomposable
+representation of size `2^{O(n)}` with one subtraction from a constant and
+positive normalization. The nonnegative base circuit is right-linear in
+the input order. Every nonnegative decomposable probabilistic circuit for
+that distribution has size `2^{Ω(n²)}`. -/
 @[tutorial_box "cor:paper-probabilistic"]
 theorem probabilistic_subtraction (n : ℕ) (h300 : 300 ≤ n) :
     ∃ hn : 0 < n, ∃ ranks : LabelOrders n,
@@ -118,7 +120,8 @@ theorem probabilistic_subtraction (n : ℕ) (h300 : 300 ≤ n) :
         C.size ≤ positiveCircuitBound n + 1) ∧
       0 < countermodelCount ranks hn a ∧
       (∃ P : ArithCircuit.{0, 0} (Fin (encodedInputCount n) × Bool),
-        P.IsMonotone ∧ P.IsSetMultilinear ∧ P.size ≤ arithmeticCircuitBound n ∧
+        P.IsMonotone ∧ P.IsSetMultilinear ∧ P.IsRightLinear (fun i ↦ i.val) ∧
+        P.size ≤ arithmeticCircuitBound n ∧
         ∀ x, (condProb (uniformDist _) (hardFunction ranks hn a) x : ℝ) =
           (1 - P.boolValue x) / (countermodelCount ranks hn a : ℝ)) ∧
       (∀ P : ProbCircuit.{0, 0} (Fin (encodedInputCount n)),
@@ -138,15 +141,16 @@ theorem probabilistic_subtraction (n : ℕ) (h300 : 300 ≤ n) :
   · let σ := Equiv.refl (Fin (encodedInputCount n))
     refine ⟨hardCircuit ranks hn a σ, hardCircuit_isMonotone ranks hn a σ,
       hardCircuit_isSetMultilinear ranks hn a σ,
-      hardCircuit_size_le ranks hn a σ hwidth, ?_⟩
-    intro x
-    have hP : (hardCircuit ranks hn a σ).boolValue x =
-        if hardFunction ranks hn a x then 1 else 0 := by
-      unfold ArithCircuit.boolValue
-      rw [hardCircuit_poly_output, hardPolynomial, eval_boolPoint_sum]
-      simp only [Finset.mem_filter, Finset.mem_univ, true_and]
-    rw [hP, condProb_uniform ranks hn a h x]
-    split_ifs <;> simp
+      ?_, hardCircuit_size_le ranks hn a σ hwidth, ?_⟩
+    · simpa [σ] using hardCircuit_isRightLinear ranks hn a σ
+    · intro x
+      have hP : (hardCircuit ranks hn a σ).boolValue x =
+          if hardFunction ranks hn a x then 1 else 0 := by
+        unfold ArithCircuit.boolValue
+        rw [hardCircuit_poly_output, hardPolynomial, eval_boolPoint_sum]
+        simp only [Finset.mem_filter, Finset.mem_univ, true_and]
+      rw [hP, condProb_uniform ranks hn a h x]
+      split_ifs <;> simp
   · intro P hnn hdec hval
     apply probCircuit_lower_of_support ranks hn a hlower P hnn hdec
     intro x

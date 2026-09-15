@@ -34,6 +34,7 @@ translation, and packages the upper and lower bounds in the tagged theorem.
   any positive coefficients; the small circuit is syntactically multilinear.
 * **Probabilistic subtraction:** the upper circuit is a monotone
   set-multilinear arithmetic circuit evaluated at Boolean literal indicators.
+  It is right-linear in one variable order, hence structured-decomposable.
   Subtracting its value from one and normalizing gives the uniform complement
   distribution. The lower bound covers general nonnegative decomposable
   `ProbCircuit`s.
