@@ -1,4 +1,4 @@
-import DDNNFNegationConsequences.ArithmeticCircuits
+import DDNNFNegationCorollaries.Supporting.ArithmeticCircuits
 import DDNNFNegation.OBDD
 
 /-!

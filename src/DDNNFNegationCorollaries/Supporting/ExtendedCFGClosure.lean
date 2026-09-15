@@ -1,4 +1,4 @@
-import DDNNFNegationConsequences.FiniteClosure
+import DDNNFNegationCorollaries.Supporting.FiniteClosure
 
 /-!
 # Fixed-length parsing with epsilon and unit rules

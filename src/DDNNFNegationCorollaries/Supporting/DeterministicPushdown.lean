@@ -1,4 +1,4 @@
-import DDNNFNegationConsequences.FiniteLanguageSeparation
+import DDNNFNegationCorollaries.Supporting.FiniteLanguageSeparation
 
 /-!
 # One-way deterministic pushdown automata

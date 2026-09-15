@@ -1,5 +1,5 @@
-import DDNNFNegationConsequences.AcyclicCircuitBuilder
-import DDNNFNegationConsequences.ExtendedCFGStandardSemantics
+import DDNNFNegationCorollaries.Supporting.AcyclicCircuitBuilder
+import DDNNFNegationCorollaries.Supporting.ExtendedCFGStandardSemantics
 
 /-!
 # A DNNF parser with epsilon and unit rules

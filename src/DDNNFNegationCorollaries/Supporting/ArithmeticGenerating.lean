@@ -1,4 +1,4 @@
-import DDNNFNegationConsequences.ArithmeticSupport
+import DDNNFNegationCorollaries.Supporting.ArithmeticSupport
 
 /-!
 # Assignment encodings of multilinear polynomials

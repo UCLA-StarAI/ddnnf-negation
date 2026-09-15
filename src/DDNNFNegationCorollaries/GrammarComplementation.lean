@@ -1,4 +1,4 @@
-import DDNNFNegationConsequences.FiniteLanguageSeparation
+import DDNNFNegationCorollaries.Supporting.FiniteLanguageSeparation
 import TutorialBox
 
 /-!

@@ -1,4 +1,4 @@
-import DDNNFNegationConsequences.AutomatonToCFG
+import DDNNFNegationCorollaries.Supporting.AutomatonToCFG
 
 /-!
 # Unambiguous union of a finite family of automata

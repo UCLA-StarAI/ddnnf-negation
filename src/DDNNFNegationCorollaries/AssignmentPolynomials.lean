@@ -1,6 +1,6 @@
 import DDNNFNegationCorollaries.UnambiguousOBDD
-import DDNNFNegationConsequences.ArithmeticLayered
-import DDNNFNegationConsequences.ArithmeticSupport
+import DDNNFNegationCorollaries.Supporting.ArithmeticLayered
+import DDNNFNegationCorollaries.Supporting.ArithmeticSupport
 
 /-!
 # Assignment polynomials

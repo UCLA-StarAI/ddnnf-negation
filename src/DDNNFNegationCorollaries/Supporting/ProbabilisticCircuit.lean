@@ -1,5 +1,5 @@
 import DDNNFNegation
-import DDNNFNegationConsequences.AcyclicCircuitBuilder
+import DDNNFNegationCorollaries.Supporting.AcyclicCircuitBuilder
 
 /-!
 # Nonnegative decomposable probabilistic circuits

@@ -1,5 +1,5 @@
 import DDNNFNegation.PositiveSide
-import DDNNFNegationConsequences.LayeredAutomaton
+import DDNNFNegationCorollaries.Supporting.LayeredAutomaton
 
 /-!
 # The positive witness as an unambiguous automaton and grammar

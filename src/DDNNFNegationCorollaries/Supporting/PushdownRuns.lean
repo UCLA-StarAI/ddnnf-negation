@@ -1,4 +1,4 @@
-import DDNNFNegationConsequences.DeterministicPushdown
+import DDNNFNegationCorollaries.Supporting.DeterministicPushdown
 
 /-!
 # Runs of a deterministic pushdown automaton

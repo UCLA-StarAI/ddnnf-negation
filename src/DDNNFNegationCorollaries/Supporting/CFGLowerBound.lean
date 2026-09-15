@@ -1,6 +1,6 @@
 import DDNNFNegation.Separation
-import DDNNFNegationConsequences.WidthWitness
-import DDNNFNegationConsequences.CFGBinarization
+import DDNNFNegationCorollaries.Supporting.WidthWitness
+import DDNNFNegationCorollaries.Supporting.CFGBinarization
 import Mathlib.Analysis.SpecialFunctions.Pow.Asymptotics
 
 /-!

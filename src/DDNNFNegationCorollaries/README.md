@@ -1,6 +1,6 @@
 # Formalized corollaries
 
-This library proves the six corollaries in [the paper](../../negation-of-ddnnf.pdf).
+This library proves the six corollaries in [the paper](https://ucla-starai.github.io/ddnnf-negation/negation-of-ddnnf.pdf).
 Each theorem is tagged with its paper label and links from the corresponding
 box in the PDF. The core nonclosure proof does not import this library.
 
@@ -45,6 +45,9 @@ translation, and packages the upper and lower bounds in the tagged theorem.
   final-state acceptance. The small unambiguous automaton is presented as its
   right-linear grammar. `DPDA.complementCFG` directly constructs a complement
   grammar using run summaries, with a polynomial bound on its size.
+
+Definitions and reusable translations live in
+[Supporting](Supporting/README.md).
 
 ## Verification
 

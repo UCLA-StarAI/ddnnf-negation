@@ -1,7 +1,7 @@
 import DDNNFNegation
-import DDNNFNegationConsequences.LowerBoundGrowth
-import DDNNFNegationConsequences.ConditionalDistribution
-import DDNNFNegationConsequences.ProbabilisticCircuit
+import DDNNFNegationCorollaries.Supporting.LowerBoundGrowth
+import DDNNFNegationCorollaries.Supporting.ConditionalDistribution
+import DDNNFNegationCorollaries.Supporting.ProbabilisticCircuit
 import DDNNFNegationCorollaries.AssignmentPolynomials
 import TutorialBox
 

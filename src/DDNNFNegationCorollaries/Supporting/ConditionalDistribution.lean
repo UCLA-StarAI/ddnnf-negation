@@ -1,5 +1,5 @@
 import DDNNFNegation
-import DDNNFNegationConsequences.ProductMeasure
+import DDNNFNegationCorollaries.Supporting.ProductMeasure
 
 /-!
 # Conditional probabilities

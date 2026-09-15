@@ -1,4 +1,4 @@
-import DDNNFNegationConsequences.PushdownSeparation
+import DDNNFNegationCorollaries.Supporting.PushdownSeparation
 import DDNNFNegationCorollaries.GrammarComplementation
 import TutorialBox
 

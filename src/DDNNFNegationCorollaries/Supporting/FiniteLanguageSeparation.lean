@@ -1,6 +1,6 @@
-import DDNNFNegationConsequences.CFGLowerBound
-import DDNNFNegationConsequences.PositiveAutomaton
-import DDNNFNegationConsequences.WidthWitness
+import DDNNFNegationCorollaries.Supporting.CFGLowerBound
+import DDNNFNegationCorollaries.Supporting.PositiveAutomaton
+import DDNNFNegationCorollaries.Supporting.WidthWitness
 
 /-!
 # The fixed-length unambiguous-grammar separation

@@ -1,5 +1,5 @@
 import DDNNFNegationCorollaries.AssignmentPolynomials
-import DDNNFNegationConsequences.ArithmeticGenerating
+import DDNNFNegationCorollaries.Supporting.ArithmeticGenerating
 
 /-!
 # Missing multilinear monomials

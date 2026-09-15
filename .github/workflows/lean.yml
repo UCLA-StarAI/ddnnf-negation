@@ -34,7 +34,7 @@ jobs:
       - name: Build proof and core tests
         run: lake -KwarningAsError=true build DDNNFNegation DDNNFNegationTests
       - name: Build the corollaries and their supporting modules
-        run: lake -KwarningAsError=true build DDNNFNegationConsequences DDNNFNegationCorollaries
+        run: lake -KwarningAsError=true build DDNNFNegationCorollaries
       - name: Check final theorem axioms
         run: lake env lean -DwarningAsError=true scripts/Check.lean
       - name: Check the corollary endpoints and their axioms

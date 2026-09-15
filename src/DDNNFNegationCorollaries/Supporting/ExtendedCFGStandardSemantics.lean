@@ -1,4 +1,4 @@
-import DDNNFNegationConsequences.ExtendedCFGClosure
+import DDNNFNegationCorollaries.Supporting.ExtendedCFGClosure
 import Mathlib.Computability.ContextFreeGrammar
 
 /-!

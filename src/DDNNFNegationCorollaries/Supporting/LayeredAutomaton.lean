@@ -1,5 +1,5 @@
 import DDNNFNegation.OBDD
-import DDNNFNegationConsequences.AutomatonFamily
+import DDNNFNegationCorollaries.Supporting.AutomatonFamily
 
 /-!
 # Layered transition systems as finite-word automata

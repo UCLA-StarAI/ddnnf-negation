@@ -1,4 +1,4 @@
-import DDNNFNegationConsequences.PushdownComplementGrammar
+import DDNNFNegationCorollaries.Supporting.PushdownComplementGrammar
 
 /-!
 # Transferring the grammar lower bound to DPDAs

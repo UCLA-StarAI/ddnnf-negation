@@ -1,6 +1,6 @@
-import DDNNFNegationConsequences.PushdownRuns
-import DDNNFNegationConsequences.CFGForest
-import DDNNFNegationConsequences.CFGBinarization
+import DDNNFNegationCorollaries.Supporting.PushdownRuns
+import DDNNFNegationCorollaries.Supporting.CFGForest
+import DDNNFNegationCorollaries.Supporting.CFGBinarization
 
 /-!
 # A grammar for the complement of a DPDA

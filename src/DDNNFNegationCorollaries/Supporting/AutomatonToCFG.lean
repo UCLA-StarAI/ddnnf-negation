@@ -1,5 +1,5 @@
-import DDNNFNegationConsequences.AutomatonDuality
-import DDNNFNegationConsequences.ExtendedCFGStandardSemantics
+import DDNNFNegationCorollaries.Supporting.AutomatonDuality
+import DDNNFNegationCorollaries.Supporting.ExtendedCFGStandardSemantics
 
 /-!
 # Converting a finite automaton to a grammar

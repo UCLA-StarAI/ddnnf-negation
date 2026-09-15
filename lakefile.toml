@@ -17,11 +17,7 @@ name = "DDNNFNegation"
 srcDir = "src"
 
 # The six paper corollaries and their supporting constructions.
-# The core proof imports neither library.
-[[lean_lib]]
-name = "DDNNFNegationConsequences"
-srcDir = "src"
-
+# The core proof does not import this library.
 [[lean_lib]]
 name = "DDNNFNegationCorollaries"
 srcDir = "src"

@@ -1,5 +1,5 @@
-import DDNNFNegationConsequences.ArithmeticCircuits
-import DDNNFNegationConsequences.AcyclicCircuitBuilder
+import DDNNFNegationCorollaries.Supporting.ArithmeticCircuits
+import DDNNFNegationCorollaries.Supporting.AcyclicCircuitBuilder
 
 /-!
 # Pruning the support translation of a monotone circuit

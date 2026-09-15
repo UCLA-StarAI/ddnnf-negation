@@ -1,4 +1,4 @@
-import DDNNFNegationConsequences.ExtendedCFGToDNNF
+import DDNNFNegationCorollaries.Supporting.ExtendedCFGToDNNF
 
 /-!
 # Structural binarization of finite context-free grammars
