@@ -1,4 +1,4 @@
-# Negation of d-DNNF in Lean
+# Deterministic DNNF Is Not Polynomially Closed Under Negation
 
 [![Verify Lean proof](https://github.com/UCLA-StarAI/ddnnf-negation/actions/workflows/lean.yml/badge.svg?branch=main)](https://github.com/UCLA-StarAI/ddnnf-negation/actions/workflows/lean.yml)
 
