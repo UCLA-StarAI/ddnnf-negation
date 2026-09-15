@@ -2,7 +2,7 @@
 
 [![Verify Lean proof](https://github.com/UCLA-StarAI/ddnnf-negation/actions/workflows/lean.yml/badge.svg?branch=main)](https://github.com/UCLA-StarAI/ddnnf-negation/actions/workflows/lean.yml)
 
-**[Read the paper (PDF)](negation-of-ddnnf.pdf).** This repository formalizes the proof
+**[Read the paper (PDF)](https://ucla-starai.github.io/ddnnf-negation/negation-of-ddnnf.pdf).** This repository formalizes the proof
 that d-DNNF is not polynomially closed under negation and its circuit,
 grammar, and automaton corollaries.
 
