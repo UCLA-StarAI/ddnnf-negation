@@ -1,0 +1,41 @@
+name: Verify Lean proof
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lean-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install pinned Lean toolchain and Mathlib cache
+        uses: leanprover/lean-action@50fcf42d2e460296f1a34b402e990d1b24f8b596 # v1
+        with:
+          auto-config: "false"
+          build: "false"
+          test: "false"
+          lint: "false"
+          use-mathlib-cache: "true"
+          # Build project sources afresh; only use Mathlib's published cache.
+          use-github-cache: "false"
+      - name: Build proof and core tests
+        run: lake -KwarningAsError=true build DDNNFNegation DDNNFNegationTests
+      - name: Build the corollaries and their supporting modules
+        run: lake -KwarningAsError=true build DDNNFNegationConsequences DDNNFNegationCorollaries
+      - name: Check final theorem axioms
+        run: lake env lean -DwarningAsError=true scripts/Check.lean
+      - name: Check the corollary endpoints and their axioms
+        run: lake env lean -DwarningAsError=true scripts/CheckCorollaries.lean
