@@ -14,7 +14,7 @@ rectangle and decreases the number of nonfalse gates. Induction gives a
 cover indexed by gates.
 
 Pruning and binarization yield the internal edge-count bound
-`rectangle_cover`. The paper's node-count conclusion is
+`rectangle_cover`. The paper's edges-plus-one conclusion is
 `balanced_rectangle_cover` in `RectangleReduction.lean`.
 -/
 
@@ -183,8 +183,8 @@ def liveCount (C : NNFCircuit Var) : ℕ := liveCountOf C.node
 
 open Classical in
 /-- The number of non-false gates is at most the circuit's total gate count. -/
-theorem liveCount_le_size (C : NNFCircuit Var) : C.liveCount ≤ C.size := by
-  unfold liveCount liveCountOf size
+theorem liveCount_le_nodeCount (C : NNFCircuit Var) : C.liveCount ≤ C.nodeCount := by
+  unfold liveCount liveCountOf nodeCount
   exact (Finset.card_filter_le _ _).trans (le_of_eq Finset.card_univ)
 
 open Classical in
@@ -409,16 +409,16 @@ most one rectangle per gate. -/
 theorem gate_rectangle_cover (C : NNFCircuit Var)
     (hVar : 2 ≤ Fintype.card Var) (hdecomp : C.IsDNNF) (hfan : C.IsFanInTwo)
     {f : (Var → Bool) → Prop} (hcomputes : C.Computes f) :
-    ∃ (r : ℕ) (_ : BalancedRectangleCover f (Fin r)), r ≤ C.size := by
+    ∃ (r : ℕ) (_ : BalancedRectangleCover f (Fin r)), r ≤ C.nodeCount := by
   obtain ⟨r, R, hr, hbal, hsound, hcomplete⟩ :=
     exists_balancedRectangleCover_of_fanInTwo hVar C.liveCount C le_rfl hdecomp hfan
   exact ⟨r, ⟨R, hbal, fun j v hv ↦ (hcomputes v).mp (hsound j v hv),
-    fun v hv ↦ hcomplete v ((hcomputes v).mpr hv)⟩, hr.trans C.liveCount_le_size⟩
+    fun v hv ↦ hcomplete v ((hcomputes v).mpr hv)⟩, hr.trans C.liveCount_le_nodeCount⟩
 
 /-- Every DNNF over `N ≥ 2` variables with `s` edges has a balanced
 rectangle cover with at most `2*s + 1` members. Binarize, prune gates
 outside the output's dependency closure, then use one rectangle per gate.
-The node-count conclusion is in `RectangleReduction.lean`. -/
+The edges-plus-one conclusion is in `RectangleReduction.lean`. -/
 theorem rectangle_cover (C : NNFCircuit Var)
     (hVar : 2 ≤ Fintype.card Var) (hdecomp : C.IsDNNF)
     {f : (Var → Bool) → Prop} (hcomputes : C.Computes f) :
@@ -428,8 +428,8 @@ theorem rectangle_cover (C : NNFCircuit Var)
     (C.binarize.prune_isFanInTwo C.binarize_isFanInTwo)
     (C.binarize.prune_computes (C.binarize_computes hcomputes))
   refine ⟨r, cover, ?_⟩
-  calc r ≤ C.binarize.prune.size := hr
-    _ ≤ C.binarize.prune.edgeCount + 1 := C.binarize.prune_size_le
+  calc r ≤ C.binarize.prune.nodeCount := hr
+    _ ≤ C.binarize.prune.edgeCount + 1 := C.binarize.prune_nodeCount_le
     _ ≤ C.binarize.edgeCount + 1 := Nat.add_le_add_right C.binarize.edgeCount_prune_le 1
     _ ≤ 2 * C.edgeCount + 1 := Nat.add_le_add_right C.edgeCount_binarize_le 1
 

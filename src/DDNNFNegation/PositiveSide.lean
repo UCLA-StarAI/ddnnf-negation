@@ -393,25 +393,20 @@ theorem small_dDNNF
     encodedOuterDNNF_computes ranks hn a,
     encodedOuterDNNF_edgeCount_le_of_width ranks hn a hwidth⟩
 
-/-- The positive construction in node count, as used in the tutorial.
-Deleting unreachable nodes converts the internal edge upper bound into
-a node upper bound without changing the function or determinism. -/
+/-- The positive construction with size equal to edges plus one. -/
 @[tutorial_box "lem:tutorial-positive"]
-theorem small_dDNNF_nodes
+theorem small_dDNNF_size
     {n bitCount width : ℕ} (ranks : LabelOrders n) (hn : 0 < n)
     (a : Fin bitCount → ((Fin n × Fin n) → GadgetVector))
     (hwidth : ∀ T : ThresholdTerm n,
       (termSigned ranks hn T).positive.card +
         (termSigned ranks hn T).negative.card ≤ width) :
     ∃ C : NNFCircuit.{0, 0} (Fin bitCount),
-      C.IsDeterministicDNNF ∧
-      C.Computes (hardFunction ranks hn a) ∧
+      C.IsDeterministicDNNF ∧ C.Computes (hardFunction ranks hn a) ∧
       C.size ≤ Fintype.card (ThresholdTerm n) *
         (1 + 10 * ((bitCount + 1) * 16 ^ width)) + 1 := by
-  obtain ⟨C, hdet, hcomputes, hsize⟩ := small_dDNNF ranks hn a hwidth
-  exact ⟨C.prune, C.prune_isDeterministicDNNF hdet, C.prune_computes hcomputes,
-    C.prune_size_le.trans
-      (Nat.add_le_add_right (C.edgeCount_prune_le.trans hsize) 1)⟩
+  obtain ⟨C, hdet, hf, he⟩ := small_dDNNF ranks hn a hwidth
+  exact ⟨C, hdet, hf, Nat.add_le_add_right he 1⟩
 
 end
 

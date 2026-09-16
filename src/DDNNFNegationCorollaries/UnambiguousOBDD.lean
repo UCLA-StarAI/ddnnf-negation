@@ -1,3 +1,4 @@
+import DDNNFNegationCorollaries.Supporting.NodeCountBounds
 import DDNNFNegation.Separation
 import TutorialBox
 
@@ -7,7 +8,8 @@ import TutorialBox
 The paper's unambiguous OBDD corollary. A guess node joins the term
 OBDDs in a common variable order; disjoint terms make the result
 unambiguous. The main theorem supplies the DNNF lower bound for
-the complement. Size counts nodes.
+the complement. Branching-program size counts nodes; DNNF size counts
+edges plus one.
 -/
 
 namespace DDNNFNegation
@@ -369,9 +371,9 @@ theorem toNNFCircuit_isDNNF (B : BranchingProgram Var) :
     | exact (B.readOnce _ _ _ _ hdecision).1
     | exact (B.readOnce _ _ _ _ hdecision).2
 
-theorem toNNFCircuit_size (B : BranchingProgram Var) :
-    B.toNNFCircuit.size = 5 * B.size := by
-  rw [NNFCircuit.size, size]
+theorem toNNFCircuit_nodeCount (B : BranchingProgram Var) :
+    B.toNNFCircuit.nodeCount = 5 * B.size := by
+  rw [NNFCircuit.nodeCount, size]
   change Fintype.card (ProgramExpansionKind × B.Gate) = 5 * Fintype.card B.Gate
   rw [Fintype.card_prod, Fintype.card_congr programExpansionKindEquiv,
     Fintype.card_fin]
@@ -987,9 +989,9 @@ theorem unambiguous_obdd_separation (n : ℕ) (hn : 0 < n) :
       ∀ D : NNFCircuit.{0, 0} (Fin (encodedInputCount n)),
         D.IsDNNF →
         D.Computes (fun x ↦ ¬hardFunction ranks hn a x) →
-        spectralNodeLower n ≤ (D.size : ℝ) := by
+        spectralSizeLower n ≤ (D.size : ℝ) := by
   obtain ⟨ranks, hwidth⟩ := every_term_short hn
-  obtain ⟨a, hlower⟩ := DNNF_lower_bound_nodes n hn ranks
+  obtain ⟨a, hlower⟩ := DNNF_lower_bound_size n hn ranks
   exact ⟨ranks, a, fun σ ↦ exists_unambiguous_obdd_every_order ranks hn hwidth a σ, hlower⟩
 
 end DDNNFNegation

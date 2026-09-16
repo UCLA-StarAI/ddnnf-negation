@@ -75,7 +75,7 @@ theorem complement_CFG_lower_bound_of_DNNF_lower_bound
       D.IsDNNF →
       D.Computes (fun x ↦ ¬hardFunction ranks hnpos a x) →
       spectralCircuitLower n ≤
-        (2 * (D.size * (D.size + 2)) + 1 : ℕ)) :
+        (2 * (D.nodeCount * (D.nodeCount + 2)) + 1 : ℕ)) :
     ∀ (G : ContextFreeGrammar Bool)
         [Fintype G.NT] [DecidableEq G.NT],
       (∀ x : Fin (encodedInputCount n) → Bool,
@@ -106,7 +106,7 @@ theorem complement_CFG_lower_bound_of_DNNF_lower_bound
       (hlanguage x)
   have hDlower := hlower D hDNNF hDcomputes
   change spectralCircuitLower n ≤
-    (2 * (D.size * (D.size + 2)) + 1 : ℕ) at hDlower
+    (2 * (D.nodeCount * (D.nodeCount + 2)) + 1 : ℕ) at hDlower
   let q := Fintype.card G.NT + 2 +
     ∑ rule : RuleRef G, rule.1.output.length
   let B :=
@@ -115,10 +115,10 @@ theorem complement_CFG_lower_bound_of_DNNF_lower_bound
         (encodedInputCount n + 1) ^ 3 +
       (q * (encodedInputCount n + 1) ^ 2 + 1) * q *
         (encodedInputCount n + 1) ^ 2
-  have hDsize : D.size ≤ B := by
-    exact intervalCircuit_size_le G
+  have hDsize : D.nodeCount ≤ B := by
+    exact intervalCircuit_nodeCount_le G
   have hpoly :
-      2 * (D.size * (D.size + 2)) + 1 ≤ 2 * (B * (B + 2)) + 1 := by
+      2 * (D.nodeCount * (D.nodeCount + 2)) + 1 ≤ 2 * (B * (B + 2)) + 1 := by
     nlinarith
   have hquadratic :
       spectralCircuitLower n ≤ (2 * (B * (B + 2)) + 1 : ℕ) :=
@@ -142,7 +142,7 @@ theorem complement_CFG_ninth_power_lower_bound_of_DNNF_lower_bound
       D.IsDNNF →
       D.Computes (fun x ↦ ¬hardFunction ranks hnpos a x) →
       spectralCircuitLower n ≤
-        (2 * (D.size * (D.size + 2)) + 1 : ℕ)) :
+        (2 * (D.nodeCount * (D.nodeCount + 2)) + 1 : ℕ)) :
     ∀ (G : ContextFreeGrammar Bool)
         [Fintype G.NT] [DecidableEq G.NT],
       (∀ x : Fin (encodedInputCount n) → Bool,
@@ -283,7 +283,7 @@ theorem complement_CFG_exponential_description_lower_bound_of_DNNF_lower_bound
       D.IsDNNF →
       D.Computes (fun x ↦ ¬hardFunction ranks hnpos a x) →
       spectralCircuitLower n ≤
-        (2 * (D.size * (D.size + 2)) + 1 : ℕ)) :
+        (2 * (D.nodeCount * (D.nodeCount + 2)) + 1 : ℕ)) :
     ∀ (G : ContextFreeGrammar Bool)
         [Fintype G.NT] [DecidableEq G.NT],
       (∀ x : Fin (encodedInputCount n) → Bool,
@@ -317,7 +317,7 @@ theorem complement_CFG_sourceParameter_lower_bound_of_DNNF_lower_bound
       D.IsDNNF →
       D.Computes (fun x ↦ ¬hardFunction ranks hnpos a x) →
       spectralCircuitLower n ≤
-        (2 * (D.size * (D.size + 2)) + 1 : ℕ))
+        (2 * (D.nodeCount * (D.nodeCount + 2)) + 1 : ℕ))
     (hdominates :
       (2 : ℝ) * (encodedInputCount n + 3 : ℕ) ≤
         cfgDescriptionExponentialLower n) :

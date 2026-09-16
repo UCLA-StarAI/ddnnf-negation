@@ -11,8 +11,8 @@ import TutorialBox
 
 At construction parameter `n`, the hard function has `60 * n^2` inputs,
 a d-DNNF of size `2^{O(n)}`, and a DNNF lower bound of `2^{Ω(n^2)}` for
-its negation. Internal edge estimates are converted to the node-count
-statement `negation_separation`.
+its negation. Circuit size is the number of edges plus one; the
+combined statement is `negation_separation`.
 
 Padding with unused variables to length `2^(46*n)` gives
 `nonclosure_under_negation`: polynomial size before negation and a
@@ -69,9 +69,9 @@ theorem card_paddedVar {core total : ℕ} (hcore : core ≤ total) :
   omega
 
 /-- The output gate witnesses that every circuit has at least one gate. -/
-theorem circuit_size_pos
+theorem circuit_nodeCount_pos
     {Var : Type*} [DecidableEq Var] (C : NNFCircuit Var) :
-    1 ≤ C.size := by
+    1 ≤ C.nodeCount := by
   have hpos : 0 < Fintype.card C.Gate :=
     Fintype.card_pos_iff.mpr ⟨C.output⟩
   change 1 ≤ Fintype.card C.Gate
@@ -370,7 +370,7 @@ theorem separation_after_padding
   exact (quasipolynomial_le_spectralEdgeLower n hn).trans hD
 
 /-- The padded separation with adversarial gate types in any universe.
-Renumber the gates by `Fin D.size` to apply `separation_after_padding`. -/
+Renumber the gates by `Fin D.nodeCount` to apply `separation_after_padding`. -/
 theorem separation_after_padding_of_any_gates.{u}
     (n : ℕ) (hn : 25 ≤ n) :
     ∃ ranks : LabelOrders n,
@@ -404,7 +404,7 @@ theorem separation_after_padding_of_any_gates.{u}
     (NNFCircuit.computes_toFinGates D _ hDcomputes)
   rwa [NNFCircuit.edgeCount_toFinGates] at h
 
-/-- The unpadded separation measured in nodes, with a small d-DNNF and a lower bound for every DNNF for its negation. -/
+/-- The unpadded separation with size equal to edges plus one. -/
 @[tutorial_box "thm:tutorial-main"]
 theorem negation_separation
     (n : ℕ) (hn : 0 < n) :
@@ -418,17 +418,16 @@ theorem negation_separation
       ∀ D : NNFCircuit.{0, 0} (Fin (encodedInputCount n)),
         D.IsDNNF →
         D.Computes (fun x ↦ ¬hardFunction ranks hn a x) →
-        spectralNodeLower n ≤ (D.size : ℝ) := by
+        spectralSizeLower n ≤ (D.size : ℝ) := by
   obtain ⟨ranks, hwidth⟩ := every_term_short hn
-  obtain ⟨a, hlower⟩ := DNNF_lower_bound_nodes n hn ranks
-  obtain ⟨C, hdet, hcomputes, hsize⟩ := small_dDNNF_nodes ranks hn a hwidth
+  obtain ⟨a, hlower⟩ := DNNF_lower_bound_size n hn ranks
+  obtain ⟨C, hdet, hcomputes, hsize⟩ := small_dDNNF_size ranks hn a hwidth
   refine ⟨ranks, a, C, hdet, hcomputes, ?_, hlower⟩
   exact hsize.trans (Nat.add_le_add_right
     (Nat.mul_le_mul_right _ (card_thresholdTerm_le n)) 1)
 
-/-- The padding corollary in node count. The positive circuit fits within
-the padded length; taking a square root of the internal quasipolynomial
-lower bound preserves its asymptotic form. -/
+
+/-- Padding gives a linear-size witness and a quasipolynomial size lower bound. -/
 @[tutorial_box "cor:tutorial-padding"]
 theorem nonclosure_under_negation
     (n : ℕ) (hn : 25 ≤ n) :
@@ -448,10 +447,10 @@ theorem nonclosure_under_negation
         D.IsDNNF →
         D.Computes (fun x ↦ ¬paddedEncodedOuterFunction ranks
           (by omega : 0 < n) a x) →
-        Real.sqrt (quasipolynomialPrefactor *
+        (quasipolynomialPrefactor *
             (exponentialPaddedLength n : ℝ) ^
               (quasipolynomialRate *
-                Real.log (exponentialPaddedLength n : ℝ)) / 3) ≤
+                Real.log (exponentialPaddedLength n : ℝ))) ≤
           (D.size : ℝ) := by
   obtain ⟨ranks, a, C, _hdet, _hcomputes, _hsize, hpadded⟩ :=
     exists_candidate_padded_dDNNF_and_complement_DNNF_lower_bound n (by omega)
@@ -463,12 +462,9 @@ theorem nonclosure_under_negation
   let Cpad : NNFCircuit.{0, 0}
       (PaddedVar (encodedInputCount n) (exponentialPaddedLength n)) :=
     C.padRightVariables
-  refine ⟨ranks, a, Cpad.prune, hcard,
-    Cpad.prune_isDeterministicDNNF hdet, Cpad.prune_computes hcomputes, ?_, ?_⟩
+  refine ⟨ranks, a, Cpad, hcard, hdet, hcomputes, ?_, ?_⟩
   · calc
-      Cpad.prune.size ≤ Cpad.prune.edgeCount + 1 := Cpad.prune_size_le
-      _ ≤ positiveCircuitBound n + 1 :=
-        Nat.add_le_add_right (Cpad.edgeCount_prune_le.trans hsize) 1
+      Cpad.size ≤ positiveCircuitBound n + 1 := Nat.add_le_add_right hsize 1
       _ ≤ 2 ^ (45 * n) + 1 :=
         Nat.add_le_add_right (positiveCircuitBound_le_two_pow n hn13) 1
       _ ≤ 2 ^ (45 * n + 1) := by
@@ -481,19 +477,11 @@ theorem nonclosure_under_negation
     have hD : quasipolynomialPrefactor *
         (exponentialPaddedLength n : ℝ) ^
           (quasipolynomialRate * Real.log (exponentialPaddedLength n : ℝ)) ≤
-        (D.dedup.edgeCount : ℝ) := by
+        (D.edgeCount : ℝ) := by
       rw [← exponential_eq_paddedLength_rpow_log]
       exact (quasipolynomial_le_spectralEdgeLower n hn).trans
-        (hlower D.dedup (D.dedup_isDNNF hDNNF) (D.dedup_computes hDcomputes))
-    have hs := circuit_size_pos D
-    have he := D.edgeCount_dedup_le
-    have heNat : D.dedup.edgeCount ≤ 3 * D.size ^ 2 := by nlinarith
-    have heR : (D.dedup.edgeCount : ℝ) ≤ 3 * (D.size : ℝ) ^ 2 := by
-      exact_mod_cast heNat
-    rw [Real.sqrt_le_iff]
-    constructor
-    · positivity
-    · linarith
+        (hlower D hDNNF hDcomputes)
+    exact hD.trans (by unfold NNFCircuit.size; push_cast; linarith)
 
 end
 

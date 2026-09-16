@@ -1,7 +1,8 @@
+import DDNNFNegationCorollaries.Supporting.NodeCountBounds
 import DDNNFNegation
 import DDNNFNegationCorollaries.Supporting.LowerBoundGrowth
 import DDNNFNegationCorollaries.Supporting.ConditionalDistribution
-import DDNNFNegationCorollaries.Supporting.ProbabilisticCircuit
+import DDNNFNegationCorollaries.Supporting.ProbabilisticSupport
 import DDNNFNegationCorollaries.AssignmentPolynomials
 import TutorialBox
 
@@ -44,28 +45,32 @@ variable {n : ℕ} (ranks : LabelOrders n) (hn : 0 < n)
 /-- The DNNF lower bound forces a countermodel once the bound exceeds one. -/
 theorem exists_countermodel_of_lower
     (hlower : ∀ D : NNFCircuit.{0, 0} (Fin (encodedInputCount n)), D.IsDNNF →
-      D.Computes (fun x ↦ ¬hardFunction ranks hn a x) → spectralNodeLower n ≤ (D.size : ℝ))
+      D.Computes (fun x ↦ ¬hardFunction ranks hn a x) → spectralNodeLower n ≤ (D.nodeCount : ℝ))
     (h300 : 300 ≤ n) : ∃ x, ¬hardFunction ranks hn a x := by
   by_contra h
   have hall : ∀ x, hardFunction ranks hn a x := by simpa using h
   have hb := hlower (botCircuit _) (botCircuit_isDNNF _)
     (fun x => ⟨fun hf => hf.elim, fun hx => hx (hall x)⟩)
-  have hs : (botCircuit (encodedInputCount n)).size = 1 := rfl
+  have hs : (botCircuit (encodedInputCount n)).nodeCount = 1 := rfl
   rw [hs] at hb
   exact (not_le_of_gt (spectralNodeLower_gt_one h300)) (by simpa using hb)
 
 /-- The support lower bound for probabilistic circuits over the inputs. -/
 theorem probCircuit_lower_of_support
     (hlower : ∀ D : NNFCircuit.{0, 0} (Fin (encodedInputCount n)), D.IsDNNF →
-      D.Computes (fun x ↦ ¬hardFunction ranks hn a x) → spectralNodeLower n ≤ (D.size : ℝ))
+      D.Computes (fun x ↦ ¬hardFunction ranks hn a x) → spectralNodeLower n ≤ (D.nodeCount : ℝ))
     (P : ProbCircuit.{0, 0} (Fin (encodedInputCount n))) (hnn : P.IsNonneg)
     (hdec : P.IsDecomposable)
     (hsupp : ∀ x, 0 < P.value P.output x ↔ ¬hardFunction ranks hn a x) :
-    spectralNodeLower n ≤ 3 * (P.size : ℝ) := by
-  have h := hlower P.toDNNF (P.toDNNF_isDNNF hdec)
-    (fun x => (P.toDNNF_computes hnn x).trans (hsupp x))
-  rw [P.toDNNF_size] at h
-  exact_mod_cast h
+    spectralNodeLower n ≤ (P.size : ℝ) := by
+  have h := hlower P.toSmallDNNF.prune
+    (P.toSmallDNNF.prune_isDNNF (P.toSmallDNNF_isDNNF hdec))
+    (P.toSmallDNNF.prune_computes
+      (fun x ↦ (P.toSmallDNNF_semantics hnn P.output x).trans (hsupp x)))
+  have hs : P.toSmallDNNF.prune.nodeCount ≤ P.size :=
+    P.toSmallDNNF.prune_nodeCount_le.trans
+      ((Nat.add_le_add_right P.toSmallDNNF.edgeCount_prune_le 1).trans P.toSmallDNNF_size_le)
+  exact h.trans (Nat.cast_le.mpr hs)
 
 /-- The uniform prior. -/
 def uniformDist (N : ℕ) : ProductDist N where
@@ -121,18 +126,18 @@ theorem probabilistic_subtraction (n : ℕ) (h300 : 300 ≤ n) :
       0 < countermodelCount ranks hn a ∧
       (∃ P : ArithCircuit.{0, 0} (Fin (encodedInputCount n) × Bool),
         P.IsMonotone ∧ P.IsSetMultilinear ∧ P.IsRightLinear (fun i ↦ i.val) ∧
-        P.size ≤ arithmeticCircuitBound n ∧
+        P.size ≤ 2 * arithmeticCircuitBound n + 1 ∧
         ∀ x, (condProb (uniformDist _) (hardFunction ranks hn a) x : ℝ) =
           (1 - P.boolValue x) / (countermodelCount ranks hn a : ℝ)) ∧
       (∀ P : ProbCircuit.{0, 0} (Fin (encodedInputCount n)),
         P.IsNonneg → P.IsDecomposable →
         (∀ x, P.value P.output x =
           (condProb (uniformDist _) (hardFunction ranks hn a) x : ℝ)) →
-        spectralNodeLower n ≤ 3 * (P.size : ℝ)) := by
+        spectralNodeLower n ≤ (P.size : ℝ)) := by
   have hn : 0 < n := by omega
   obtain ⟨ranks, hwidth⟩ := every_term_short hn
   obtain ⟨a, hlower⟩ := DNNF_lower_bound_nodes n hn ranks
-  obtain ⟨C, hdet, hcomputes, hsize⟩ := small_dDNNF_nodes ranks hn a hwidth
+  obtain ⟨C, hdet, hcomputes, hsize⟩ := small_dDNNF_size ranks hn a hwidth
   have h := exists_countermodel_of_lower ranks hn a hlower h300
   refine ⟨hn, ranks, a, ⟨C, hdet, hcomputes, hsize.trans (Nat.add_le_add_right
     (Nat.mul_le_mul_right _ (card_thresholdTerm_le n)) 1)⟩, ?_, ?_, ?_⟩
@@ -141,7 +146,8 @@ theorem probabilistic_subtraction (n : ℕ) (h300 : 300 ≤ n) :
   · let σ := Equiv.refl (Fin (encodedInputCount n))
     refine ⟨hardCircuit ranks hn a σ, hardCircuit_isMonotone ranks hn a σ,
       hardCircuit_isSetMultilinear ranks hn a σ,
-      ?_, hardCircuit_size_le ranks hn a σ hwidth, ?_⟩
+      ?_, (hardCircuit ranks hn a σ).size_le.trans
+        (by have h := hardCircuit_nodeCount_le ranks hn a σ hwidth; omega), ?_⟩
     · simpa [σ] using hardCircuit_isRightLinear ranks hn a σ
     · intro x
       have hP : (hardCircuit ranks hn a σ).boolValue x =

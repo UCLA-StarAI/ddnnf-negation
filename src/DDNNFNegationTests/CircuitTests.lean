@@ -41,7 +41,7 @@ def andCircuit : NNFCircuit (Fin 2) where
     intro gate
     fin_cases gate <;> simp [NNFNode.Support]
 
-example : andCircuit.size = 3 := rfl
+example : andCircuit.nodeCount = 3 := rfl
 
 example : andCircuit.Computes (fun v ↦ v 0 = true ∧ v 1 = true) :=
   fun _ ↦ Iff.rfl
@@ -197,7 +197,7 @@ def sharedCircuit : NNFCircuit (Fin 2) where
     fin_cases gate <;> simp [NNFNode.Support]
 
 /-- The shared literal is counted once. -/
-example : sharedCircuit.size = 6 := rfl
+example : sharedCircuit.nodeCount = 6 := rfl
 
 example : sharedCircuit.Computes (fun v ↦ v 0 = true) := by
   intro v
@@ -266,7 +266,7 @@ example : natLiteralCircuit.IsDeterministicDNNF := by
 
 example : natLiteralCircuit.Computes fun v ↦ v 7 = true := fun _ ↦ Iff.rfl
 
-example : natLiteralCircuit.size = 1 := rfl
+example : natLiteralCircuit.nodeCount = 1 := rfl
 
 /-! ## 2. General properties of the model -/
 
@@ -277,8 +277,8 @@ theorem not_isChild_self {Var : Type*} [DecidableEq Var]
   fun h ↦ lt_irrefl _ (C.child_rank gate gate h)
 
 /-- A circuit has at least its output gate. -/
-theorem one_le_size {Var : Type*} [DecidableEq Var] (C : NNFCircuit Var) :
-    1 ≤ C.size :=
+theorem one_le_nodeCount {Var : Type*} [DecidableEq Var] (C : NNFCircuit Var) :
+    1 ≤ C.nodeCount :=
   Fintype.card_pos_iff.mpr ⟨C.output⟩
 
 /-- A circuit computes one function, up to pointwise equivalence. -/
@@ -832,10 +832,10 @@ theorem autCircuit_isDeterministicDNNF (A : BoolAutomaton S) (n : ℕ) :
     autCircuit_computes A n⟩
 
 /-- The exact gate count, linear in `n`. -/
-theorem autCircuit_size (A : BoolAutomaton S) (n : ℕ) :
-    (autCircuit A n).size =
+theorem autCircuit_nodeCount (A : BoolAutomaton S) (n : ℕ) :
+    (autCircuit A n).nodeCount =
       1 + Fintype.card S * (n + 1) + 2 * n + 2 * Fintype.card S * n := by
-  rw [NNFCircuit.size]
+  rw [NNFCircuit.nodeCount]
   change Fintype.card (AutGate S n) = _
   rw [Fintype.card_congr (autGateEquiv S n)]
   simp only [Fintype.card_sum, Fintype.card_prod, Fintype.card_unit,
@@ -863,8 +863,8 @@ theorem parity_isDeterministicDNNF (n : ℕ) :
 
 /-- Parity of `n` bits in `8n + 3` shared gates; any DNF needs `2 ^ (n - 1)`
 terms. -/
-theorem parity_size (n : ℕ) : (autCircuit parityAutomaton n).size = 8 * n + 3 := by
-  rw [autCircuit_size, Fintype.card_bool]
+theorem parity_nodeCount (n : ℕ) : (autCircuit parityAutomaton n).nodeCount = 8 * n + 3 := by
+  rw [autCircuit_nodeCount, Fintype.card_bool]
   ring
 
 /-- The parity circuit computes exclusive or, checked on all eight inputs of
@@ -887,9 +887,9 @@ theorem modThree_isDeterministicDNNF (n : ℕ) :
     (autCircuit modThreeAutomaton n).IsDeterministicDNNF :=
   (autCircuit_isDeterministicDNNF modThreeAutomaton n).1
 
-theorem modThree_size (n : ℕ) :
-    (autCircuit modThreeAutomaton n).size = 11 * n + 4 := by
-  rw [autCircuit_size, Fintype.card_fin]
+theorem modThree_nodeCount (n : ℕ) :
+    (autCircuit modThreeAutomaton n).nodeCount = 11 * n + 4 := by
+  rw [autCircuit_nodeCount, Fintype.card_fin]
   ring
 
 /-- Checked on all sixteen inputs of length four. -/

@@ -8,7 +8,7 @@ import DDNNFNegation.Circuit
 semantics, supports, node count, and the d-DNNF property. In the reverse
 direction, `Circuit.toBinaryNNFCircuit` replaces arbitrary-fan-in
 conjunctions by binary ones. It preserves semantics and the DNNF property
-and uses `s * (s + 1)` nodes for an input of size `s`.
+and uses `s * (s + 1)` nodes for an input with `s` stored nodes.
 
 These are the two directions needed to carry the small witness and the
 lower bound to the concrete statement in `TrustBoundary.lean`.
@@ -68,51 +68,51 @@ namespace Circuit
 variable (C : Circuit Var)
 
 /-- The defining equation for recursive circuit evaluation. -/
-theorem eval_eq (v : Var → Bool) (i : Fin C.size) :
+theorem eval_eq (v : Var → Bool) (i : Fin C.nodeCount) :
     C.eval v i = (C.node i).evalLocal v (fun j ↦ C.eval v j.1) := by
   rw [Circuit.eval]
 
 /-- The defining equation for recursive circuit support. -/
-theorem support_eq [DecidableEq Var] (i : Fin C.size) :
+theorem support_eq [DecidableEq Var] (i : Fin C.nodeCount) :
     C.support i = (C.node i).supportLocal (fun j ↦ C.support j.1) := by
   rw [Circuit.support]
 
 /-- Recursive array semantics evaluates an AND as the conjunction of its child values. -/
-theorem eval_and {i : Fin C.size} {children : Finset (Fin C.size)}
+theorem eval_and {i : Fin C.nodeCount} {children : Finset (Fin C.nodeCount)}
     (h : C.node i = .and children) (v : Var → Bool) :
     C.eval v i = true ↔ ∀ j ∈ children, C.eval v j = true := by
   rw [C.eval_eq, h, Node.evalLocal_and]
 
 /-- Recursive array semantics evaluates an OR as the disjunction of its child values. -/
-theorem eval_or {i : Fin C.size} {children : Finset (Fin C.size)}
+theorem eval_or {i : Fin C.nodeCount} {children : Finset (Fin C.nodeCount)}
     (h : C.node i = .or children) (v : Var → Bool) :
     C.eval v i = true ↔ ∃ j ∈ children, C.eval v j = true := by
   rw [C.eval_eq, h, Node.evalLocal_or]
 
 /-- The support of an array AND is the union of its child supports. -/
-theorem support_and [DecidableEq Var] {i : Fin C.size}
-    {children : Finset (Fin C.size)} (h : C.node i = .and children) :
+theorem support_and [DecidableEq Var] {i : Fin C.nodeCount}
+    {children : Finset (Fin C.nodeCount)} (h : C.node i = .and children) :
     C.support i = children.biUnion C.support := by
   rw [C.support_eq, h, Node.supportLocal_and]
 
 /-- The support of an array OR is the union of its child supports. -/
-theorem support_or [DecidableEq Var] {i : Fin C.size}
-    {children : Finset (Fin C.size)} (h : C.node i = .or children) :
+theorem support_or [DecidableEq Var] {i : Fin C.nodeCount}
+    {children : Finset (Fin C.nodeCount)} (h : C.node i = .or children) :
     C.support i = children.biUnion C.support := by
   rw [C.support_eq, h, Node.supportLocal_or]
 
 /-- Gates of the binary expansion.  `(i,k)` stores the conjunction of the
 children of original gate `i` whose positions are below `k`.  The final
 position `k = size` is the translated original gate. -/
-abbrev BinaryGate := Fin C.size × Fin (C.size + 1)
+abbrev BinaryGate := Fin C.nodeCount × Fin (C.nodeCount + 1)
 
 /-- The final expansion gate representing original position `i`. -/
-def binaryRoot (i : Fin C.size) : C.BinaryGate :=
-  (i, ⟨C.size, by omega⟩)
+def binaryRoot (i : Fin C.nodeCount) : C.BinaryGate :=
+  (i, ⟨C.nodeCount, by omega⟩)
 
 /-- The original child positions accumulated before prefix boundary `k`. -/
-def prefixChildren (children : Finset (Fin C.size)) (k : Fin (C.size + 1)) :
-    Finset (Fin C.size) :=
+def prefixChildren (children : Finset (Fin C.nodeCount)) (k : Fin (C.nodeCount + 1)) :
+    Finset (Fin C.nodeCount) :=
   Finset.univ.filter fun j ↦ j ∈ children ∧ j.val < k.val
 
 /-- Meaning assigned to every gate of the binary expansion. -/
@@ -120,14 +120,14 @@ def binarySemantics (g : C.BinaryGate) (v : Var → Bool) : Prop :=
   match C.node g.1 with
   | .and children =>
       ∀ j ∈ C.prefixChildren children g.2, C.eval v j = true
-  | _ => if g.2.val = C.size then C.eval v g.1 = true else True
+  | _ => if g.2.val = C.nodeCount then C.eval v g.1 = true else True
 
 /-- Variable support assigned to every gate of the binary expansion. -/
 def binarySupport [DecidableEq Var] (g : C.BinaryGate) : Finset Var :=
   match C.node g.1 with
   | .and children =>
       (C.prefixChildren children g.2).biUnion C.support
-  | _ => if g.2.val = C.size then C.support g.1 else ∅
+  | _ => if g.2.val = C.nodeCount then C.support g.1 else ∅
 
 /-- Local node of the binary expansion.  An unbounded conjunction is scanned
 once through all possible child positions.  A position that is not a child
@@ -138,35 +138,35 @@ def binaryNode (g : C.BinaryGate) : NNFNode Var C.BinaryGate :=
   | .and children =>
       if hk : g.2.val = 0 then .top
       else
-        let j : Fin C.size := ⟨g.2.val - 1, by omega⟩
-        let previous : Fin (C.size + 1) := ⟨g.2.val - 1, by omega⟩
+        let j : Fin C.nodeCount := ⟨g.2.val - 1, by omega⟩
+        let previous : Fin (C.nodeCount + 1) := ⟨g.2.val - 1, by omega⟩
         .conj (g.1, previous)
           (if j ∈ children then C.binaryRoot j else (g.1, ⟨0, by omega⟩))
   | .const b =>
-      if g.2.val = C.size then if b then .top else .bot else .top
+      if g.2.val = C.nodeCount then if b then .top else .bot else .top
   | .lit x b =>
-      if g.2.val = C.size then if b then .pos x else .neg x else .top
+      if g.2.val = C.nodeCount then if b then .pos x else .neg x else .top
   | .or children =>
-      if g.2.val = C.size
+      if g.2.val = C.nodeCount
       then .disj ((children.sort (· ≤ ·)).map C.binaryRoot)
       else .top
 
 /-- An original array child lies below its parent's root in the binary expansion. -/
-theorem binaryRoot_rank_lt {i j : Fin C.size} (hji : j < i)
-    (k : Fin (C.size + 1)) :
-    j.val * (C.size + 1) + C.size <
-      i.val * (C.size + 1) + k.val := by
-  have hstep : j.val * (C.size + 1) + C.size <
-      (j.val + 1) * (C.size + 1) := by
+theorem binaryRoot_rank_lt {i j : Fin C.nodeCount} (hji : j < i)
+    (k : Fin (C.nodeCount + 1)) :
+    j.val * (C.nodeCount + 1) + C.nodeCount <
+      i.val * (C.nodeCount + 1) + k.val := by
+  have hstep : j.val * (C.nodeCount + 1) + C.nodeCount <
+      (j.val + 1) * (C.nodeCount + 1) := by
     rw [Nat.add_mul]
     omega
-  have hbuckets : (j.val + 1) * (C.size + 1) ≤
-      i.val * (C.size + 1) :=
+  have hbuckets : (j.val + 1) * (C.nodeCount + 1) ≤
+      i.val * (C.nodeCount + 1) :=
     Nat.mul_le_mul_right _ (Nat.succ_le_iff.mpr hji)
   exact lt_of_lt_of_le hstep (le_trans hbuckets (Nat.le_add_right _ _))
 
 /-- The binary expansion reproduces the recursive array value at every original gate. -/
-theorem binarySemantics_root (i : Fin C.size) (v : Var → Bool) :
+theorem binarySemantics_root (i : Fin C.nodeCount) (v : Var → Bool) :
     C.binarySemantics (C.binaryRoot i) v ↔ C.eval v i = true := by
   cases hnode : C.node i with
   | const b => simp [binarySemantics, binaryRoot, hnode]
@@ -178,7 +178,7 @@ theorem binarySemantics_root (i : Fin C.size) (v : Var → Bool) :
         Finset.mem_filter, Finset.mem_univ, true_and, Fin.is_lt, and_true]
 
 /-- The binary expansion reproduces the original support at every root position. -/
-theorem binarySupport_root [DecidableEq Var] (i : Fin C.size) :
+theorem binarySupport_root [DecidableEq Var] (i : Fin C.nodeCount) :
     C.binarySupport (C.binaryRoot i) = C.support i := by
   cases hnode : C.node i with
   | const b => simp [binarySupport, binaryRoot, hnode]
@@ -196,18 +196,18 @@ def toBinaryNNFCircuit [DecidableEq Var] : NNFCircuit Var where
   gateDecidableEq := inferInstance
   output := C.binaryRoot C.output
   node := C.binaryNode
-  rank g := g.1.val * (C.size + 1) + g.2.val
+  rank g := g.1.val * (C.nodeCount + 1) + g.2.val
   child_rank := by
     intro g child hchild
     cases hnode : C.node g.1 with
     | const b =>
-        by_cases hlast : g.2.val = C.size <;>
+        by_cases hlast : g.2.val = C.nodeCount <;>
           cases b <;> simp [binaryNode, hnode, hlast, NNFNode.IsChild] at hchild
     | lit x b =>
-        by_cases hlast : g.2.val = C.size <;>
+        by_cases hlast : g.2.val = C.nodeCount <;>
           cases b <;> simp [binaryNode, hnode, hlast, NNFNode.IsChild] at hchild
     | or children =>
-        by_cases hlast : g.2.val = C.size
+        by_cases hlast : g.2.val = C.nodeCount
         · simp only [binaryNode, hnode, hlast, if_pos, NNFNode.IsChild,
             List.mem_map, Finset.mem_sort] at hchild
           obtain ⟨j, hj, rfl⟩ := hchild
@@ -222,7 +222,7 @@ def toBinaryNNFCircuit [DecidableEq Var] : NNFCircuit Var where
           rcases hchild with rfl | rfl
           · dsimp
             omega
-          · by_cases hjmem : (⟨g.2.val - 1, by omega⟩ : Fin C.size) ∈ children
+          · by_cases hjmem : (⟨g.2.val - 1, by omega⟩ : Fin C.nodeCount) ∈ children
             · simp only [hjmem, if_pos]
               dsimp [binaryRoot]
               have hj := C.children_lt g.1
@@ -239,7 +239,7 @@ def toBinaryNNFCircuit [DecidableEq Var] : NNFCircuit Var where
         have heval : C.eval v g.1 = b := by
           rw [C.eval_eq, hnode]
           rfl
-        by_cases hlast : g.2.val = C.size <;>
+        by_cases hlast : g.2.val = C.nodeCount <;>
           cases b <;>
           simp [binarySemantics, binaryNode, hnode, hlast,
             NNFNode.Holds, heval]
@@ -247,12 +247,12 @@ def toBinaryNNFCircuit [DecidableEq Var] : NNFCircuit Var where
         have heval : C.eval v g.1 = (v x == b) := by
           rw [C.eval_eq, hnode]
           rfl
-        by_cases hlast : g.2.val = C.size <;>
+        by_cases hlast : g.2.val = C.nodeCount <;>
           cases b <;> cases v x <;>
           simp [binarySemantics, binaryNode, hnode, hlast,
             NNFNode.Holds, heval]
     | or children =>
-        by_cases hlast : g.2.val = C.size
+        by_cases hlast : g.2.val = C.nodeCount
         · simp only [binarySemantics, binaryNode, hnode, hlast, if_pos,
             NNFNode.Holds]
           rw [C.eval_or hnode]
@@ -272,8 +272,8 @@ def toBinaryNNFCircuit [DecidableEq Var] : NNFCircuit Var where
         by_cases hk : g.2.val = 0
         · simp [binarySemantics, binaryNode, hnode, hk,
             prefixChildren, NNFNode.Holds]
-        · let j : Fin C.size := ⟨g.2.val - 1, by omega⟩
-          let previous : Fin (C.size + 1) := ⟨g.2.val - 1, by omega⟩
+        · let j : Fin C.nodeCount := ⟨g.2.val - 1, by omega⟩
+          let previous : Fin (C.nodeCount + 1) := ⟨g.2.val - 1, by omega⟩
           by_cases hjmem : j ∈ children
           · rw [show C.binaryNode g =
                 .conj (g.1, previous) (C.binaryRoot j) by
@@ -350,7 +350,7 @@ def toBinaryNNFCircuit [DecidableEq Var] : NNFCircuit Var where
         have hsupport : C.support g.1 = ∅ := by
           rw [C.support_eq, hnode]
           rfl
-        by_cases hlast : g.2.val = C.size <;>
+        by_cases hlast : g.2.val = C.nodeCount <;>
           cases b <;>
           simp [binarySupport, binaryNode, hnode, hlast,
             NNFNode.Support, hsupport]
@@ -358,12 +358,12 @@ def toBinaryNNFCircuit [DecidableEq Var] : NNFCircuit Var where
         have hsupport : C.support g.1 = {x} := by
           rw [C.support_eq, hnode]
           rfl
-        by_cases hlast : g.2.val = C.size <;>
+        by_cases hlast : g.2.val = C.nodeCount <;>
           cases b <;>
           simp [binarySupport, binaryNode, hnode, hlast,
             NNFNode.Support, hsupport]
     | or children =>
-        by_cases hlast : g.2.val = C.size
+        by_cases hlast : g.2.val = C.nodeCount
         · have hleft : C.binarySupport g = C.support g.1 := by
             simp [binarySupport, hnode, hlast]
           rw [hleft]
@@ -377,8 +377,8 @@ def toBinaryNNFCircuit [DecidableEq Var] : NNFCircuit Var where
         by_cases hk : g.2.val = 0
         · simp [binarySupport, binaryNode, hnode, hk,
             prefixChildren, NNFNode.Support]
-        · let j : Fin C.size := ⟨g.2.val - 1, by omega⟩
-          let previous : Fin (C.size + 1) := ⟨g.2.val - 1, by omega⟩
+        · let j : Fin C.nodeCount := ⟨g.2.val - 1, by omega⟩
+          let previous : Fin (C.nodeCount + 1) := ⟨g.2.val - 1, by omega⟩
           by_cases hjmem : j ∈ children
           · rw [show C.binaryNode g =
                 .conj (g.1, previous) (C.binaryRoot j) by
@@ -412,7 +412,7 @@ def toBinaryNNFCircuit [DecidableEq Var] : NNFCircuit Var where
               simp [binaryNode, hnode, hk, hjmem, j, previous]]
             simp only [NNFNode.Support, binarySupport, hnode]
             have hzero :
-                (C.prefixChildren children (⟨0, by omega⟩ : Fin (C.size + 1))).biUnion
+                (C.prefixChildren children (⟨0, by omega⟩ : Fin (C.nodeCount + 1))).biUnion
                     C.support = ∅ := by
               ext y
               simp [prefixChildren]
@@ -440,10 +440,10 @@ def toBinaryNNFCircuit [DecidableEq Var] : NNFCircuit Var where
                 simpa [previous] using hqlt
               exact ⟨q, ⟨hqmem, by omega⟩, hxq⟩
 
-/-- The shared binary expansion has `size * (size + 1)` gates. -/
-theorem size_toBinaryNNFCircuit [DecidableEq Var] :
-    C.toBinaryNNFCircuit.size = C.size * (C.size + 1) := by
-  change Fintype.card (Fin C.size × Fin (C.size + 1)) = _
+/-- The shared binary expansion has `nodeCount * (nodeCount + 1)` gates. -/
+theorem nodeCount_toBinaryNNFCircuit [DecidableEq Var] :
+    C.toBinaryNNFCircuit.nodeCount = C.nodeCount * (C.nodeCount + 1) := by
+  change Fintype.card (Fin C.nodeCount × Fin (C.nodeCount + 1)) = _
   rw [Fintype.card_prod, Fintype.card_fin, Fintype.card_fin]
 
 /-- Array decomposability implies decomposability of the shared binary expansion. -/
@@ -452,19 +452,19 @@ theorem isDNNF_toBinaryNNFCircuit [DecidableEq Var]
   intro gate left right hgate
   cases hnode : C.node gate.1 with
   | const b =>
-      by_cases hlast : gate.2.val = C.size <;>
+      by_cases hlast : gate.2.val = C.nodeCount <;>
         cases b <;> simp [toBinaryNNFCircuit, binaryNode, hnode, hlast] at hgate
   | lit x b =>
-      by_cases hlast : gate.2.val = C.size <;>
+      by_cases hlast : gate.2.val = C.nodeCount <;>
         cases b <;> simp [toBinaryNNFCircuit, binaryNode, hnode, hlast] at hgate
   | or children =>
-      by_cases hlast : gate.2.val = C.size <;>
+      by_cases hlast : gate.2.val = C.nodeCount <;>
         simp [toBinaryNNFCircuit, binaryNode, hnode, hlast] at hgate
   | and children =>
       simp only [toBinaryNNFCircuit, binaryNode, hnode] at hgate
       split at hgate
       · simp at hgate
-      · let j : Fin C.size := ⟨gate.2.val - 1, by omega⟩
+      · let j : Fin C.nodeCount := ⟨gate.2.val - 1, by omega⟩
         split at hgate
         · obtain ⟨rfl, rfl⟩ := NNFNode.conj.inj hgate
           change Disjoint
@@ -621,7 +621,7 @@ theorem gateOrder_lt_iff (a b : C.Gate) : a < b ↔ C.gateKey a < C.gateKey b :=
   Iff.rfl
 
 /-- The gates listed in order of increasing rank. -/
-noncomputable def gateEnum : C.Gate ≃ Fin C.size :=
+noncomputable def gateEnum : C.Gate ≃ Fin C.nodeCount :=
   (Fintype.orderIsoFinOfCardEq C.Gate rfl).symm.toEquiv
 
 /-- Sorting by rank places every child before its parent, as the array boundary requires. -/
@@ -634,7 +634,7 @@ theorem gateEnum_lt_of_rank_lt {a b : C.Gate} (h : C.rank a < C.rank b) :
 rank.  Reducible, so that `Fin C.toCircuit.size` and `Fin C.size` are
 the same type for rewriting. -/
 noncomputable abbrev toCircuit : Circuit Var where
-  size := C.size
+  nodeCount := C.nodeCount
   node i := (C.node (C.gateEnum.symm i)).toNode C.gateEnum
   children_lt := by
     intro i j hj
@@ -644,7 +644,7 @@ noncomputable abbrev toCircuit : Circuit Var where
   output := C.gateEnum C.output
 
 /-- The array entry at a renumbered gate is its translated proof-side node. -/
-theorem node_toCircuit (i : Fin C.size) :
+theorem node_toCircuit (i : Fin C.nodeCount) :
     C.toCircuit.node i = (C.node (C.gateEnum.symm i)).toNode C.gateEnum := rfl
 
 /-- The translated output is the array position of the original output gate. -/
@@ -669,7 +669,7 @@ theorem support_toCircuit (g : C.Gate) :
 
 /-- The support correspondence in the reverse indexing form used by the class-preservation
 proof. -/
-theorem support_toCircuit' (i : Fin C.size) :
+theorem support_toCircuit' (i : Fin C.nodeCount) :
     C.toCircuit.support i = C.support (C.gateEnum.symm i) := by
   have := C.support_toCircuit (C.gateEnum.symm i)
   rwa [Equiv.apply_symm_apply] at this

@@ -76,6 +76,12 @@ theorem scope_congr [DecidableEq V] {f g : Gate → Finset V} (node : PCNode V G
   | mul l r => simp only [Scope]; rw [h l (Or.inl rfl), h r (Or.inr rfl)]
   | _ => rfl
 
+/-- Number of incoming edges. -/
+def fanIn : PCNode V Gate → ℕ
+  | .scale _ _ => 1
+  | .add _ _ | .mul _ _ => 2
+  | _ => 0
+
 end PCNode
 
 /-- A finite acyclic probabilistic circuit: gates, an output, a node table
@@ -131,7 +137,20 @@ theorem scope_eq (gate : P.Gate) : P.scope gate = (P.node gate).Scope P.scope :=
   simp [hc]
 
 /-- Number of gates. -/
-def size : ℕ := Fintype.card P.Gate
+def nodeCount : ℕ := Fintype.card P.Gate
+
+/-- Circuit size counts incoming edges and one output wire. -/
+def size : ℕ := (∑ g, (P.node g).fanIn) + 1
+
+omit [DecidableEq V] in
+/-- Every probabilistic gate has at most two inputs. -/
+theorem size_le : P.size ≤ 2 * P.nodeCount + 1 := by
+  unfold size nodeCount
+  have h : (∑ g, (P.node g).fanIn) ≤ ∑ _g : P.Gate, 2 := by
+    apply Finset.sum_le_sum
+    intro g _
+    cases P.node g <;> simp [PCNode.fanIn]
+  simpa [mul_comm] using Nat.add_le_add_right h 1
 
 /-- Every leaf function, constant and scale factor is nonnegative. -/
 def IsNonneg : Prop := ∀ gate, (P.node gate).IsNonneg
@@ -289,7 +308,7 @@ noncomputable def supportDescription : AcyclicNNFDescription (Fin N) P.SupportGa
 /-- The support DNNF of a probabilistic circuit. -/
 noncomputable def toDNNF : NNFCircuit (Fin N) := P.supportDescription.toCircuit
 
-theorem toDNNF_size : P.toDNNF.size = 3 * P.size := by
+theorem toDNNF_nodeCount : P.toDNNF.nodeCount = 3 * P.nodeCount := by
   show Fintype.card P.SupportGate = 3 * Fintype.card P.Gate
   rw [Fintype.card_sum, Fintype.card_prod, Fintype.card_bool]
   ring
@@ -546,7 +565,14 @@ abbrev forget : ProbCircuit V where
   child_rank := fun g c h => P.child_rank g c ((P.forgetNode_isChild _ _).1 h)
 
 omit [DecidableEq V] [DecidableEq W] in
-theorem forget_size : P.forget.size = P.size := rfl
+theorem forget_size : P.forget.size = P.size := by
+  apply congrArg (· + 1)
+  apply Finset.sum_congr rfl
+  intro g _
+  change (P.forgetNode (P.node g)).fanIn = (P.node g).fanIn
+  cases P.node g with
+  | leaf v h => cases v <;> rfl
+  | _ => rfl
 
 omit [DecidableEq V] [DecidableEq W] in
 theorem forget_isNonneg (hnn : P.IsNonneg) : P.forget.IsNonneg := by

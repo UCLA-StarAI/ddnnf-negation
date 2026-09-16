@@ -76,8 +76,8 @@ noncomputable def toCircuit (D : AcyclicNNFDescription Var Gate) :
   support := D.support
   support_eq := D.support_eq
 
-@[simp] theorem toCircuit_size (D : AcyclicNNFDescription Var Gate) :
-    D.toCircuit.size = Fintype.card Gate := rfl
+@[simp] theorem toCircuit_nodeCount (D : AcyclicNNFDescription Var Gate) :
+    D.toCircuit.nodeCount = Fintype.card Gate := rfl
 
 end AcyclicNNFDescription
 

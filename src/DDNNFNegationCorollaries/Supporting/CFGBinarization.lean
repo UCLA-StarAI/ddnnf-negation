@@ -426,10 +426,10 @@ theorem nonterminal_card :
 
 /-- Explicit polynomial node bound for the DNNF compiled from an arbitrary
 finite CFG. -/
-theorem intervalCircuit_size_le {N : ℕ} :
+theorem intervalCircuit_nodeCount_le {N : ℕ} :
     let q := Fintype.card G.NT + 2 +
       ∑ rule : RuleRef G, rule.1.output.length
-    ((grammar G).closureIntervalCircuit (N := N)).size ≤
+    ((grammar G).closureIntervalCircuit (N := N)).nodeCount ≤
       1 + 2 * N +
         (q * (N + 1) ^ 2) * q ^ 3 * (N + 1) ^ 3 +
         (q * (N + 1) ^ 2 + 1) * q * (N + 1) ^ 2 := by
@@ -443,14 +443,14 @@ theorem exists_intervalDNNF (N : ℕ) :
     ∃ D : NNFCircuit.{0, 0} (Fin N),
       D.Computes (fun v : Fin N → Bool ↦ List.ofFn v ∈ G.language) ∧
       D.IsDNNF ∧
-      D.size ≤
+      D.nodeCount ≤
         1 + 2 * N +
           (q * (N + 1) ^ 2) * q ^ 3 * (N + 1) ^ 3 +
           (q * (N + 1) ^ 2 + 1) * q * (N + 1) ^ 2 := by
   refine ⟨(grammar G).closureIntervalCircuit (N := N),
     intervalCircuit_computes_source_language (N := N) G,
     intervalCircuit_isDNNF (N := N) G,
-    intervalCircuit_size_le (N := N) G⟩
+    intervalCircuit_nodeCount_le (N := N) G⟩
 
 end CFGBinarization
 

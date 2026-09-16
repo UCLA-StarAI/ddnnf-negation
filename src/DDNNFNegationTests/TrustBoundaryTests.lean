@@ -1,4 +1,4 @@
-import DDNNFNegation.CircuitTransport
+import DDNNFNegation.CircuitCompaction
 
 /-!
 # Small circuits exercising the trust boundary
@@ -16,26 +16,26 @@ namespace DDNNFNegation.Circuit
 variable {Var : Type} (C : Circuit Var)
 
 /-- Evaluation of a constant node, from the defining equation. -/
-theorem eval_const {i : Fin C.size} {b : Bool} (h : C.node i = .const b)
+theorem eval_const {i : Fin C.nodeCount} {b : Bool} (h : C.node i = .const b)
     (v : Var → Bool) : C.eval v i = b := by
   rw [C.eval_eq, h]
   rfl
 
 /-- Evaluation of a literal node, from the defining equation. -/
-theorem eval_lit {i : Fin C.size} {x : Var} {b : Bool}
+theorem eval_lit {i : Fin C.nodeCount} {x : Var} {b : Bool}
     (h : C.node i = .lit x b) (v : Var → Bool) :
     C.eval v i = (v x == b) := by
   rw [C.eval_eq, h]
   rfl
 
 /-- Support of a constant node, from the defining equation. -/
-theorem support_const [DecidableEq Var] {i : Fin C.size} {b : Bool}
+theorem support_const [DecidableEq Var] {i : Fin C.nodeCount} {b : Bool}
     (h : C.node i = .const b) : C.support i = ∅ := by
   rw [C.support_eq, h]
   rfl
 
 /-- Support of a literal node, from the defining equation. -/
-theorem support_lit [DecidableEq Var] {i : Fin C.size} {x : Var} {b : Bool}
+theorem support_lit [DecidableEq Var] {i : Fin C.nodeCount} {x : Var} {b : Bool}
     (h : C.node i = .lit x b) : C.support i = {x} := by
   rw [C.support_eq, h]
   rfl
@@ -47,10 +47,10 @@ namespace DDNNFNegation.TrustBoundaryTests
 open DDNNFNegation
 
 /-- `x₀ ∧ x₁`: literals at positions 0 and 1, the conjunction at 2.
-Reducible, so that `Fin andCircuit.size` and `Fin 3` are the same type
+Reducible, so that `Fin andCircuit.nodeCount` and `Fin 3` are the same type
 for rewriting. -/
 abbrev andCircuit : Circuit ℕ where
-  size := 3
+  nodeCount := 3
   node := ![.lit 0 true, .lit 1 true, .and {0, 1}]
   children_lt := by decide
   output := 2
@@ -97,5 +97,26 @@ theorem andCircuit_isDeterministicDNNF : andCircuit.IsDeterministicDNNF := by
     · exact absurd rfl hne
   · intro i children hi
     fin_cases i <;> simp [andCircuit] at hi
+
+/-- Even an array containing unused constants has size one when it has no edges. -/
+abbrev isolatedConstants : Circuit ℕ where
+  nodeCount := 7
+  node := fun _ ↦ .const true
+  children_lt := by intro i j h; exact (Finset.notMem_empty j h).elim
+  output := 0
+
+example : isolatedConstants.size = 1 := by decide
+example : isolatedConstants.compact.nodeCount = 1 := by decide
+
+/-- A shared input contributes one edge for each parent reference. -/
+abbrev sharedDiamond : Circuit ℕ where
+  nodeCount := 4
+  node := ![.lit 0 true, .or {0}, .or {0}, .or {1, 2}]
+  children_lt := by decide
+  output := 3
+
+example : sharedDiamond.edgeCount = 4 := by decide
+example : sharedDiamond.size = 5 := by decide
+example : andCircuit.size = 3 := by decide
 
 end DDNNFNegation.TrustBoundaryTests

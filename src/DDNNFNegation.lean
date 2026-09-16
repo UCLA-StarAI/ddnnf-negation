@@ -46,4 +46,5 @@ import DDNNFNegation.FinalCover
 -- The separation theorem, padding, and trust-boundary transport
 import DDNNFNegation.Separation
 import DDNNFNegation.CircuitTransport
+import DDNNFNegation.CircuitCompaction
 import DDNNFNegation.NegationNotClosed

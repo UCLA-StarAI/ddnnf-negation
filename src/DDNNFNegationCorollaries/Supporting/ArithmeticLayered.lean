@@ -30,13 +30,6 @@ namespace ArithNode
 
 variable {V Gate Gate' : Type*}
 
-/-- Rename the children of a node. -/
-def map (f : Gate → Gate') : ArithNode V Gate → ArithNode V Gate'
-  | const c => const c
-  | var x => var x
-  | add left right => add (f left) (f right)
-  | mul left right => mul (f left) (f right)
-
 theorem eval_map (f : Gate → Gate') (node : ArithNode V Gate)
     (child : Gate' → MvPolynomial V ℝ) :
     (node.map f).eval child = node.eval (child ∘ f) := by
@@ -432,8 +425,8 @@ noncomputable def circuit (start : State) : ArithCircuit (Fin N × Bool) where
 
 variable (start : State)
 
-theorem circuit_size :
-    (circuit σ step accept start).size =
+theorem circuit_nodeCount :
+    (circuit σ step accept start).nodeCount =
       (N + 1) * Fintype.card State + (N * Fintype.card State * 2 + N * 2) := by
   show Fintype.card ((Fin (N + 1) × State) ⊕ ((Fin N × State × Bool) ⊕ (Fin N × Bool))) = _
   simp only [Fintype.card_sum, Fintype.card_prod, Fintype.card_fin, Fintype.card_bool]
@@ -673,7 +666,7 @@ noncomputable def chain : ArithCircuit V where
   vars := chainVars e f
   vars_eq := chain_vars_eq e f
 
-theorem chain_size : (chain e f).size = ∑ i, (f i).size + (m + 1) := by
+theorem chain_nodeCount : (chain e f).nodeCount = ∑ i, (f i).nodeCount + (m + 1) := by
   show Fintype.card ((Σ i, (f i).Gate) ⊕ Fin (m + 1)) = _
   rw [Fintype.card_sum, Fintype.card_sigma, Fintype.card_fin]
   rfl

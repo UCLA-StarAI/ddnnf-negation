@@ -1,3 +1,4 @@
+import DDNNFNegationCorollaries.Supporting.ArithmeticCompaction
 import DDNNFNegationCorollaries.UnambiguousOBDD
 import DDNNFNegationCorollaries.Supporting.ArithmeticLayered
 import DDNNFNegationCorollaries.Supporting.ArithmeticSupport
@@ -110,13 +111,13 @@ theorem eval_boolPoint_weightedSum (S : Finset (Fin N → Bool)) (c : (Fin N →
 
 /-- A DNNF node lower bound for `¬L` is a gate lower bound for every
 monotone circuit computing a positive reweighting of `∑_{¬L a} m_a`. -/
-theorem reweighted_lower_bound_of_dnnf (L : (Fin N → Bool) → Prop) (bound : ℝ)
+theorem reweighted_lower_bound_of_dnnf_nodes (L : (Fin N → Bool) → Prop) (bound : ℝ)
     (hlower : ∀ D : NNFCircuit.{0, 0} (Fin N), D.IsDNNF →
-      D.Computes (fun x ↦ ¬L x) → bound ≤ (D.size : ℝ))
+      D.Computes (fun x ↦ ¬L x) → bound ≤ (D.nodeCount : ℝ))
     (A : ArithCircuit.{0, 0} (Fin N × Bool)) (hmono : A.IsMonotone)
     (c : (Fin N → Bool) → ℝ) (hc : ∀ x, 0 < c x)
     (hA : A.Computes (∑ x ∈ univ.filter (fun x ↦ ¬L x), C (c x) * assignmentMonomial x)) :
-    bound ≤ (A.size : ℝ) := by
+    bound ≤ (A.nodeCount : ℝ) := by
   have hA' : A.poly A.output = _ := hA
   have hout : ∀ m ∈ (A.poly A.output).support, ∀ i, m (i, true) + m (i, false) ≤ 1 := by
     intro m hm i
@@ -131,20 +132,42 @@ theorem reweighted_lower_bound_of_dnnf (L : (Fin N → Bool) → Prop) (bound : 
     · exact ⟨fun h0 ↦ absurd h0 (lt_irrefl (0 : ℝ)), fun h' ↦ absurd h h'⟩
     · exact ⟨fun _ ↦ h, fun _ ↦ hc x⟩
   have h := hlower A.prunedDNNF A.prunedDNNF_isDNNF (A.prunedDNNF_computes hmono hout _ hval)
-  rwa [ArithCircuit.prunedDNNF_size] at h
+  rwa [ArithCircuit.prunedDNNF_nodeCount] at h
 
 /-- A DNNF node lower bound for `¬L` is a gate lower bound for every
 monotone circuit with disjoint position sets at its products whose
 support on the Boolean points is `¬L`. -/
-theorem support_lower_bound_of_dnnf (L : (Fin N → Bool) → Prop) (bound : ℝ)
+theorem support_lower_bound_of_dnnf_nodes (L : (Fin N → Bool) → Prop) (bound : ℝ)
     (hlower : ∀ D : NNFCircuit.{0, 0} (Fin N), D.IsDNNF →
-      D.Computes (fun x ↦ ¬L x) → bound ≤ (D.size : ℝ))
+      D.Computes (fun x ↦ ¬L x) → bound ≤ (D.nodeCount : ℝ))
     (A : ArithCircuit.{0, 0} (Fin N × Bool)) (hmono : A.IsMonotone)
     (hdisj : A.IsPairDisjoint) (hval : ∀ x, 0 < A.boolValue x ↔ ¬L x) :
-    bound ≤ (A.size : ℝ) := by
+    bound ≤ (A.nodeCount : ℝ) := by
   have h := hlower (A.toDNNF hmono) (A.toDNNF_isDNNF hmono hdisj)
     (A.toDNNF_computes hmono _ hval)
-  rwa [ArithCircuit.toDNNF_size] at h
+  rwa [ArithCircuit.toDNNF_nodeCount] at h
+
+/-- The reweighted-polynomial lower bound in edges-plus-one size. -/
+theorem reweighted_lower_bound_of_dnnf (L : (Fin N → Bool) → Prop) (bound : ℝ)
+    (hlower : ∀ D : NNFCircuit.{0, 0} (Fin N), D.IsDNNF →
+      D.Computes (fun x ↦ ¬L x) → bound ≤ (D.nodeCount : ℝ))
+    (A : ArithCircuit.{0, 0} (Fin N × Bool)) (hmono : A.IsMonotone)
+    (c : (Fin N → Bool) → ℝ) (hc : ∀ x, 0 < c x)
+    (hA : A.Computes (∑ x ∈ univ.filter (fun x ↦ ¬L x), C (c x) * assignmentMonomial x)) :
+    bound ≤ (A.size : ℝ) :=
+  (reweighted_lower_bound_of_dnnf_nodes L bound hlower A.compact
+    (A.compact_isMonotone hmono) c hc hA).trans (Nat.cast_le.mpr A.compact_nodeCount_le_size)
+
+/-- The Boolean-support lower bound in edges-plus-one size. -/
+theorem support_lower_bound_of_dnnf (L : (Fin N → Bool) → Prop) (bound : ℝ)
+    (hlower : ∀ D : NNFCircuit.{0, 0} (Fin N), D.IsDNNF →
+      D.Computes (fun x ↦ ¬L x) → bound ≤ (D.nodeCount : ℝ))
+    (A : ArithCircuit.{0, 0} (Fin N × Bool)) (hmono : A.IsMonotone)
+    (hdisj : A.IsPairDisjoint) (hval : ∀ x, 0 < A.boolValue x ↔ ¬L x) :
+    bound ≤ (A.size : ℝ) :=
+  (support_lower_bound_of_dnnf_nodes L bound hlower A.compact
+    (A.compact_isMonotone hmono) (A.compact_isPairDisjoint hdisj) hval).trans
+    (Nat.cast_le.mpr A.compact_nodeCount_le_size)
 
 /-! ### The circuit for `T_N` -/
 
@@ -161,9 +184,9 @@ theorem fullCircuit_poly_output :
   rw [LayeredArith.circuit_poly_output, LayeredArith.layerPoly_zero, fullPolynomial_eq_sum]
   simp
 
-theorem fullCircuit_size : (fullCircuit σ).size = 5 * N + 1 := by
+theorem fullCircuit_nodeCount : (fullCircuit σ).nodeCount = 5 * N + 1 := by
   unfold fullCircuit
-  rw [LayeredArith.circuit_size, Fintype.card_unit]
+  rw [LayeredArith.circuit_nodeCount, Fintype.card_unit]
   ring
 
 theorem fullCircuit_isMonotone : (fullCircuit σ).IsMonotone :=
@@ -271,20 +294,20 @@ theorem termCircuit_poly_output (T : ThresholdTerm n) :
   intro x _
   rw [encodedTermRun_eq_state, encodedTermState_comp_equiv, encodedTermAcceptBool_eq_true]
 
-theorem termCircuit_size (T : ThresholdTerm n) :
-    (termCircuit ranks hn a σ T).size =
+theorem termCircuit_nodeCount (T : ThresholdTerm n) :
+    (termCircuit ranks hn a σ T).nodeCount =
       (encodedInputCount n + 1) * 16 ^ (encodedTermSupport ranks hn T).card +
         (encodedInputCount n * 16 ^ (encodedTermSupport ranks hn T).card * 2 +
           encodedInputCount n * 2) := by
   unfold termCircuit
-  rw [LayeredArith.circuit_size, card_encodedTermState]
+  rw [LayeredArith.circuit_nodeCount, card_encodedTermState]
 
-theorem termCircuit_size_le (T : ThresholdTerm n)
+theorem termCircuit_nodeCount_le (T : ThresholdTerm n)
     (hw : (termSigned ranks hn T).positive.card +
       (termSigned ranks hn T).negative.card ≤ 10 * n) :
-    (termCircuit ranks hn a σ T).size ≤
+    (termCircuit ranks hn a σ T).nodeCount ≤
       (3 * encodedInputCount n + 1) * 16 ^ (10 * n) + 2 * encodedInputCount n := by
-  rw [termCircuit_size]
+  rw [termCircuit_nodeCount]
   have h := card_encodedTermSupport_le ranks hn T hw
   have hpow : 16 ^ (encodedTermSupport ranks hn T).card ≤ 16 ^ (10 * n) :=
     Nat.pow_le_pow_right (by norm_num) h
@@ -362,18 +385,18 @@ theorem arithmeticCircuitBound_le_two_pow (n : ℕ) (hn : 13 ≤ n) :
     arithmeticCircuitBound n ≤ 2 ^ (45 * n) :=
   (arithmeticCircuitBound_le_positiveCircuitBound n).trans (positiveCircuitBound_le_two_pow n hn)
 
-theorem hardCircuit_size_le
+theorem hardCircuit_nodeCount_le
     (hw : ∀ T : ThresholdTerm n, (termSigned ranks hn T).positive.card +
       (termSigned ranks hn T).negative.card ≤ 10 * n) :
-    (hardCircuit ranks hn a σ).size ≤ arithmeticCircuitBound n := by
+    (hardCircuit ranks hn a σ).nodeCount ≤ arithmeticCircuitBound n := by
   unfold hardCircuit
-  rw [ArithCircuit.chain_size]
-  calc ∑ T : ThresholdTerm n, (termCircuit ranks hn a σ T).size +
+  rw [ArithCircuit.chain_nodeCount]
+  calc ∑ T : ThresholdTerm n, (termCircuit ranks hn a σ T).nodeCount +
         (Fintype.card (ThresholdTerm n) - 1 + 1)
       ≤ ∑ _T : ThresholdTerm n,
           ((3 * encodedInputCount n + 1) * 16 ^ (10 * n) + 2 * encodedInputCount n) +
           Fintype.card (ThresholdTerm n) :=
-        Nat.add_le_add (Finset.sum_le_sum fun T _ ↦ termCircuit_size_le ranks hn a σ T (hw T))
+        Nat.add_le_add (Finset.sum_le_sum fun T _ ↦ termCircuit_nodeCount_le ranks hn a σ T (hw T))
           (le_of_eq (Nat.sub_add_cancel (card_thresholdTerm_pos hn)))
     _ = Fintype.card (ThresholdTerm n) *
           ((3 * encodedInputCount n + 1) * 16 ^ (10 * n) + 2 * encodedInputCount n + 1) := by

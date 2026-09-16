@@ -139,7 +139,7 @@ theorem isDNNF_transportGates {Gate' : Type*} [Fintype Gate'] [DecidableEq Gate'
 
 /-- **Every circuit is isomorphic to one whose gates live in the lowest
 universe.**  The gate type is finite, so numbering the gates by
-`Fin (size C)` loses nothing. -/
+`Fin (nodeCount C)` loses nothing. -/
 noncomputable def toFinGates (C : NNFCircuit Var) : NNFCircuit.{_, 0} Var :=
   C.transportGates (Fintype.equivFin C.Gate)
 
@@ -312,8 +312,8 @@ noncomputable def mapVariables (C : NNFCircuit Var) (e : Var ↪ Var') :
     rw [C.support_eq]
     exact support_mapVariables e C.support (C.node gate)
 
-@[simp] theorem mapVariables_size (C : NNFCircuit Var) (e : Var ↪ Var') :
-    (C.mapVariables e).size = C.size := rfl
+@[simp] theorem mapVariables_nodeCount (C : NNFCircuit Var) (e : Var ↪ Var') :
+    (C.mapVariables e).nodeCount = C.nodeCount := rfl
 
 /-- Injective variable relabeling computes the original function on the pulled-back
 assignment. -/

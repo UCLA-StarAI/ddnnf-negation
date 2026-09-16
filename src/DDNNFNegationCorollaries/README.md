@@ -16,8 +16,9 @@ box in the PDF. The core nonclosure proof does not import this library.
 The statements use explicit bounds in the construction parameter `n`.
 The paper sets `m = 2^(c*n)` for a sufficiently large fixed `c` to express
 these as an `O(m)` upper bound and an `m^{Ω(log m)}` lower bound.
-Input length is `N = 60*n²`. Size counts circuit nodes, grammar productions
-and right-hand-side symbols, or the stated automaton description measure.
+Input length is `N = 60*n²`. Circuit size counts edges plus one; auxiliary gate counts are named
+`nodeCount`. Grammar size counts productions and right-hand-side symbols;
+automata and branching programs use their stated description measures.
 
 ## Reading the statements
 

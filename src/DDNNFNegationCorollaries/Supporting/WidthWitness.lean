@@ -79,7 +79,7 @@ theorem exists_candidate_dDNNF_width_and_complement_DNNF_lower_bound
         D.IsDNNF →
         D.Computes (fun x ↦ ¬hardFunction ranks
           (by omega : 0 < n) a x) →
-        spectralCircuitLower n ≤ (2 * (D.size * (D.size + 2)) + 1 : ℕ) := by
+        spectralCircuitLower n ≤ (2 * (D.nodeCount * (D.nodeCount + 2)) + 1 : ℕ) := by
   obtain ⟨ranks, a, C, hwidth, hdet, hcomputes, hsize, hcovers⟩ :=
     exists_candidate_dDNNF_width_and_complement_cover_lower_bound n hn
   refine ⟨ranks, a, C, hwidth, hdet, hcomputes, hsize, ?_⟩
@@ -94,7 +94,7 @@ theorem exists_candidate_dDNNF_width_and_complement_DNNF_lower_bound
       (D.dedup_isDNNF hDNNF) (D.dedup_computes hDcomputes)
   have hcover := hcovers (Fin r) cover
   rw [Fintype.card_fin] at hcover
-  have hr' : r ≤ 2 * (D.size * (D.size + 2)) + 1 :=
+  have hr' : r ≤ 2 * (D.nodeCount * (D.nodeCount + 2)) + 1 :=
     hr.trans (Nat.add_le_add_right (Nat.mul_le_mul_left 2 D.edgeCount_dedup_le) 1)
   exact hcover.trans (by exact_mod_cast hr')
 

@@ -1,3 +1,5 @@
+import DDNNFNegationCorollaries.Supporting.NodeCountBounds
+import DDNNFNegationCorollaries.Supporting.ArithmeticCompaction
 import DDNNFNegationCorollaries.AssignmentPolynomials
 import DDNNFNegationCorollaries.Supporting.ArithmeticGenerating
 
@@ -120,18 +122,18 @@ theorem mem_support_weightedIndicatorSum (S : Finset (Fin N → Bool))
 
 /-- The lower bound transferred to monotone circuits whose output monomials
 are exactly the multilinear monomials of the assignments outside `L`. -/
-theorem generating_lower_bound_of_dnnf (L : (Fin N → Bool) → Prop) (bound : ℝ)
+theorem generating_lower_bound_of_dnnf_nodes (L : (Fin N → Bool) → Prop) (bound : ℝ)
     (hlower : ∀ D : NNFCircuit.{0, 0} (Fin N), D.IsDNNF →
-      D.Computes (fun x ↦ ¬L x) → bound ≤ (D.size : ℝ))
+      D.Computes (fun x ↦ ¬L x) → bound ≤ (D.nodeCount : ℝ))
     (A : ArithCircuit.{0, 0} (Fin N)) (hmono : A.IsMonotone)
     (hsupp : ∀ m, m ∈ (A.poly A.output).support ↔ ∃ x, ¬L x ∧ m = selected x univ) :
-    bound ≤ ((A.size * (2 * N + 5) + 2 * N + 2 : ℕ) : ℝ) := by
+    bound ≤ ((A.nodeCount * (2 * N + 5) + 2 * N + 2 : ℕ) : ℝ) := by
   have hout : ∀ m ∈ (A.poly A.output).support, ∀ i, m i ≤ 1 := by
     intro m hm i
     obtain ⟨x, _, rfl⟩ := (hsupp m).mp hm
     exact selected_le_one x univ i
   have h := hlower A.padDNNF A.padDNNF_isDNNF ?_
-  · rwa [ArithCircuit.padDNNF_size] at h
+  · rwa [ArithCircuit.padDNNF_nodeCount] at h
   · intro x
     rw [A.padDNNF_computes hmono hout x]
     show selected x univ ∈ (A.poly A.output).support ↔ ¬L x
@@ -142,10 +144,23 @@ theorem generating_lower_bound_of_dnnf (L : (Fin N → Bool) → Prop) (bound : 
     · intro h
       exact ⟨x, h, rfl⟩
 
+/-- The same transfer in edges-plus-one size, after pruning unused arithmetic gates. -/
+theorem generating_lower_bound_of_dnnf (L : (Fin N → Bool) → Prop) (bound : ℝ)
+    (hlower : ∀ D : NNFCircuit.{0, 0} (Fin N), D.IsDNNF →
+      D.Computes (fun x ↦ ¬L x) → bound ≤ (D.nodeCount : ℝ))
+    (A : ArithCircuit.{0, 0} (Fin N)) (hmono : A.IsMonotone)
+    (hsupp : ∀ m, m ∈ (A.poly A.output).support ↔ ∃ x, ¬L x ∧ m = selected x univ) :
+    bound ≤ ((A.size * (2 * N + 5) + 2 * N + 2 : ℕ) : ℝ) := by
+  have h := generating_lower_bound_of_dnnf_nodes L bound hlower A.compact
+    (A.compact_isMonotone hmono) hsupp
+  refine h.trans (Nat.cast_le.mpr ?_)
+  have hc := A.compact_nodeCount_le_size
+  gcongr
+
 /-- The same bound for a positive reweighting of `∑_{¬L x} ∏_{i : x i} X_i`. -/
 theorem reweighted_generating_lower_bound_of_dnnf (L : (Fin N → Bool) → Prop) (bound : ℝ)
     (hlower : ∀ D : NNFCircuit.{0, 0} (Fin N), D.IsDNNF →
-      D.Computes (fun x ↦ ¬L x) → bound ≤ (D.size : ℝ))
+      D.Computes (fun x ↦ ¬L x) → bound ≤ (D.nodeCount : ℝ))
     (A : ArithCircuit.{0, 0} (Fin N)) (hmono : A.IsMonotone)
     (c : (Fin N → Bool) → ℝ) (hc : ∀ x, 0 < c x)
     (hA : A.Computes (∑ x ∈ univ.filter (fun x ↦ ¬L x), C (c x) * indicatorMonomial x)) :
@@ -242,7 +257,7 @@ noncomputable def substituteBar : ArithCircuit (Fin N) where
         simp only [ArithNode.Vars, ArithNode.substituteBar, Finset.filter_union,
           positions_union]
 
-@[simp] theorem substituteBar_size : C.substituteBar.size = C.size := rfl
+@[simp] theorem substituteBar_nodeCount : C.substituteBar.nodeCount = C.nodeCount := rfl
 
 theorem substituteBar_computes {p : MvPolynomial (Fin N × Bool) ℝ} (h : C.Computes p) :
     C.substituteBar.Computes (aeval barOne p) := by
@@ -363,11 +378,11 @@ theorem hardGeneratingCircuit_isSyntacticallyMultilinear :
   (hardCircuit ranks hn a σ).substituteBar_isSyntacticallyMultilinear
     (hardCircuit_isSetMultilinear ranks hn a σ).1
 
-theorem hardGeneratingCircuit_size_le
+theorem hardGeneratingCircuit_nodeCount_le
     (hw : ∀ T : ThresholdTerm n, (termSigned ranks hn T).positive.card +
       (termSigned ranks hn T).negative.card ≤ 10 * n) :
-    (hardGeneratingCircuit ranks hn a σ).size ≤ arithmeticCircuitBound n :=
-  hardCircuit_size_le ranks hn a σ hw
+    (hardGeneratingCircuit ranks hn a σ).nodeCount ≤ arithmeticCircuitBound n :=
+  hardCircuit_nodeCount_le ranks hn a σ hw
 
 /-- The circuit for `∏_i (1 + X_i)`: the paired circuit for `T_n` after the
 substitution. -/
@@ -386,9 +401,9 @@ theorem fullGeneratingCircuit_isSyntacticallyMultilinear :
     (fullGeneratingCircuit σ).IsSyntacticallyMultilinear :=
   (fullCircuit σ).substituteBar_isSyntacticallyMultilinear (fullCircuit_isSetMultilinear σ).1
 
-theorem fullGeneratingCircuit_size :
-    (fullGeneratingCircuit σ).size = 5 * encodedInputCount n + 1 :=
-  fullCircuit_size σ
+theorem fullGeneratingCircuit_nodeCount :
+    (fullGeneratingCircuit σ).nodeCount = 5 * encodedInputCount n + 1 :=
+  fullCircuit_nodeCount σ
 
 end encodedGenerating
 
@@ -408,11 +423,11 @@ theorem missing_monomials (n : ℕ) (hn : 0 < n) :
       (∃ P : ArithCircuit.{0, 0} (Fin (encodedInputCount n)),
         P.IsMonotone ∧ P.IsSyntacticallyMultilinear ∧
         P.Computes (hardGenerating ranks hn a) ∧
-        P.size ≤ arithmeticCircuitBound n) ∧
+        P.size ≤ 2 * arithmeticCircuitBound n + 1) ∧
       (∃ T : ArithCircuit.{0, 0} (Fin (encodedInputCount n)),
         T.IsMonotone ∧ T.IsSyntacticallyMultilinear ∧
         T.Computes (fullGenerating (encodedInputCount n)) ∧
-        T.size ≤ 5 * encodedInputCount n + 1) ∧
+        T.size ≤ 10 * encodedInputCount n + 3) ∧
       complementGenerating ranks hn a =
         fullGenerating (encodedInputCount n) - hardGenerating ranks hn a ∧
       (∀ m, coeff m (complementGenerating ranks hn a) = 0 ∨
@@ -435,10 +450,12 @@ theorem missing_monomials (n : ℕ) (hn : 0 < n) :
       hardGeneratingCircuit_isMonotone ranks hn a _,
       hardGeneratingCircuit_isSyntacticallyMultilinear ranks hn a _,
       hardGeneratingCircuit_computes ranks hn a _,
-      hardGeneratingCircuit_size_le ranks hn a _ hwidth⟩
+      (hardGeneratingCircuit ranks hn a _).size_le.trans (by
+        have h := hardGeneratingCircuit_nodeCount_le ranks hn a (Equiv.refl _) hwidth; omega)⟩
   · exact ⟨fullGeneratingCircuit (Equiv.refl _), fullGeneratingCircuit_isMonotone _,
       fullGeneratingCircuit_isSyntacticallyMultilinear _, fullGeneratingCircuit_computes _,
-      (fullGeneratingCircuit_size _).le⟩
+      (fullGeneratingCircuit (Equiv.refl _)).size_le.trans (by
+        rw [fullGeneratingCircuit_nodeCount]; omega)⟩
   · intro A hmono hsupp
     refine generating_lower_bound_of_dnnf _ _ hlower A hmono fun m ↦ ?_
     rw [hsupp, multilinear_notMem_support_hardGenerating]

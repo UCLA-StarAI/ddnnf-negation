@@ -644,7 +644,7 @@ noncomputable def padDescription : AcyclicNNFDescription (Fin N) (PadGate C.Gate
 noncomputable def padDNNF : NNFCircuit (Fin N) :=
   C.padDescription.toCircuit
 
-theorem padDNNF_size : C.padDNNF.size = C.size * (2 * N + 5) + 2 * N + 2 := by
+theorem padDNNF_nodeCount : C.padDNNF.nodeCount = C.nodeCount * (2 * N + 5) + 2 * N + 2 := by
   show Fintype.card (PadGate C.Gate N) = _
   rw [PadGate.card]
   rfl

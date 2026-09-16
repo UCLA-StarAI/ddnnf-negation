@@ -216,9 +216,9 @@ theorem edgeCount_prune_le (C : NNFCircuit Var) :
 
 /-- In the pruned circuit every gate other than the output is the input of
 some gate, so there are at most one more gate than edges. -/
-theorem prune_size_le (C : NNFCircuit Var) :
-    C.prune.size ≤ C.prune.edgeCount + 1 := by
-  apply size_le_edgeCount_add_one
+theorem prune_nodeCount_le (C : NNFCircuit Var) :
+    C.prune.nodeCount ≤ C.prune.edgeCount + 1 := by
+  apply nodeCount_le_edgeCount_add_one
   intro gate hgate
   rcases Relation.ReflTransGen.cases_tail gate.2 with heq | ⟨parent, hparent, hstep⟩
   · exact absurd (Subtype.ext heq) hgate
@@ -227,6 +227,10 @@ theorem prune_size_le (C : NNFCircuit Var) :
     have hgate' : C.toReachable gate.1 = gate := C.toReachable_of_reachable gate.2
     rw [← hgate']
     exact NNFNode.isChild_map _ hstep
+
+/-- Removing unreachable nodes bounds the retained node count by the original size. -/
+theorem prune_nodeCount_le_size (C : NNFCircuit Var) : C.prune.nodeCount ≤ C.size :=
+  C.prune_nodeCount_le.trans (Nat.add_le_add_right C.edgeCount_prune_le 1)
 
 end NNFCircuit
 

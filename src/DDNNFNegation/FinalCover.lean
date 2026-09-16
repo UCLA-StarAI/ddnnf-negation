@@ -11,8 +11,8 @@ Fix the ranks and an encoder with large restricted images before choosing
 any circuit for the complement. Every balanced zero rectangle meets the
 encoder's zero fiber in only a small fraction of that fiber. Covering the
 fiber therefore requires many rectangles. The circuit-to-cover reduction
-first yields an internal edge lower bound, then the paper's node lower
-bound `spectralNodeLower`.
+yields the paper's linear size lower bound `spectralSizeLower`.
+A separate node-count bound remains available for internal transports.
 -/
 
 namespace DDNNFNegation
@@ -83,33 +83,25 @@ theorem DNNF_lower_bound
   linarith
 
 
-/-- The square-root node lower bound obtained from the quadratic
-rectangle-cover reduction. Its exponential rate is half the cover rate. -/
-def spectralNodeLower (n : ℕ) : ℝ :=
-  Real.sqrt (1 / (64 * spectralEpsilon n) / 7)
+/-- The size lower bound obtained from a linear rectangle-cover bound. -/
+def spectralSizeLower (n : ℕ) : ℝ := 1 / (128 * spectralEpsilon n)
 
-/-- The DNNF node lower bound for the complement is `spectralNodeLower n`, asymptotically `2^{Ω(n²)}`. -/
+/-- With size equal to edges plus one, the complement requires size at least
+`1/(128 ε)`, asymptotically `2^{Ω(n²)}`. -/
 @[tutorial_box "lem:tutorial-negative"]
-theorem DNNF_lower_bound_nodes
+theorem DNNF_lower_bound_size
     (n : ℕ) (hn : 0 < n) (ranks : LabelOrders n) :
-    ∃ a : Fin (encodedInputCount n) →
-        ((Fin n × Fin n) → GadgetVector),
+    ∃ a : Fin (encodedInputCount n) → ((Fin n × Fin n) → GadgetVector),
       ∀ D : NNFCircuit.{0, 0} (Fin (encodedInputCount n)),
-        D.IsDNNF →
-        D.Computes (fun x ↦ ¬hardFunction ranks hn a x) →
-        spectralNodeLower n ≤ (D.size : ℝ) := by
-  obtain ⟨a, hcovers⟩ := exists_encoder_with_cover_lower_bound n hn ranks
-  refine ⟨a, ?_⟩
-  intro D hDNNF hDcomputes
-  obtain ⟨r, cover, hr⟩ := balanced_rectangle_cover ranks hn a D hDNNF hDcomputes
-  have hcover := hcovers (Fin r) cover
-  rw [Fintype.card_fin] at hcover
-  have hrR : (r : ℝ) ≤ 7 * (D.size : ℝ) ^ 2 := by exact_mod_cast hr
-  unfold spectralNodeLower
-  rw [Real.sqrt_le_iff]
-  constructor
-  · positivity
-  · linarith
+        D.IsDNNF → D.Computes (fun x ↦ ¬hardFunction ranks hn a x) →
+        spectralSizeLower n ≤ (D.size : ℝ) := by
+  obtain ⟨a, hlower⟩ := DNNF_lower_bound n hn ranks
+  refine ⟨a, fun D hD hf ↦ ?_⟩
+  have h := hlower D hD hf
+  unfold spectralEdgeLower at h
+  unfold spectralSizeLower NNFCircuit.size
+  push_cast
+  linarith
 
 end
 

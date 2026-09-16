@@ -248,7 +248,7 @@ noncomputable def prunedDescription : AcyclicNNFDescription (Fin N) C.Gate where
 noncomputable def prunedDNNF : NNFCircuit (Fin N) :=
   C.prunedDescription.toCircuit
 
-@[simp] theorem prunedDNNF_size : C.prunedDNNF.size = C.size := rfl
+@[simp] theorem prunedDNNF_nodeCount : C.prunedDNNF.nodeCount = C.nodeCount := rfl
 
 theorem prunedDescription_support (gate : C.Gate) :
     C.prunedDescription.support gate = C.prunedSupport gate := by

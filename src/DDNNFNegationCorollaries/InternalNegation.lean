@@ -1,3 +1,4 @@
+import DDNNFNegationCorollaries.Supporting.NodeCountBounds
 import DDNNFNegation.Separation
 import DDNNFNegation.NegationNotClosed
 import TutorialBox
@@ -66,6 +67,13 @@ def IsChild (child : Gate) : DDNode Var Gate → Prop
   | not gate => child = gate
   | _ => False
 
+/-- Number of incoming edges, including the input to a negation gate. -/
+def fanIn : DDNode Var Gate → ℕ
+  | .conj _ _ => 2
+  | .disj children => children.length
+  | .not _ => 1
+  | _ => 0
+
 end DDNode
 
 /-- A finite shared circuit with negation gates, decomposability and
@@ -96,8 +104,11 @@ instance (C : DDCircuit Var) : Fintype C.Gate := C.gateFintype
 instance (C : DDCircuit Var) : DecidableEq C.Gate := C.gateDecidableEq
 
 /-- Number of gates, negation gates included. -/
-def size (C : DDCircuit Var) : ℕ :=
+def nodeCount (C : DDCircuit Var) : ℕ :=
   Fintype.card C.Gate
+
+/-- Circuit size counts incoming edges plus one output wire. -/
+def size (C : DDCircuit Var) : ℕ := (∑ g, (C.node g).fanIn) + 1
 
 /-- Function computed at the output gate. -/
 def Computes (C : DDCircuit Var) (f : (Var → Bool) → Prop) : Prop :=
@@ -218,8 +229,15 @@ noncomputable def negateOutput (C : NNFCircuit Var) : DDCircuit Var where
 
 theorem negateOutput_size (C : NNFCircuit Var) :
     C.negateOutput.size = C.size + 1 := by
-  show Fintype.card (Option C.Gate) = Fintype.card C.Gate + 1
-  exact Fintype.card_option
+  change (∑ g : Option C.Gate, (negNode C g).fanIn) + 1 = C.size + 1
+  rw [Fintype.sum_option]
+  have h : ∀ g, ((C.node g).toDD some).fanIn = (C.node g).fanIn := by
+    intro g
+    cases C.node g <;> simp [NNFNode.toDD, DDNode.fanIn, NNFNode.fanIn]
+  change 1 + (∑ g : C.Gate, ((C.node g).toDD some).fanIn) + 1 = C.size + 1
+  simp_rw [h]
+  unfold size edgeCount
+  omega
 
 theorem negateOutput_computes (C : NNFCircuit Var) {f : (Var → Bool) → Prop}
     (h : C.Computes f) : C.negateOutput.Computes (fun v ↦ ¬ f v) := by
@@ -300,6 +318,11 @@ def IsChild (child : Gate) : POGNode Var Gate → Prop
   | sum args => ∃ arg ∈ args, arg.1 = child
   | _ => False
 
+/-- Number of signed input references. -/
+def fanIn : POGNode Var Gate → ℕ
+  | .prod args | .sum args => args.length
+  | _ => 0
+
 end POGNode
 
 /-- A finite partitioned-operation graph.  The output is a signed reference
@@ -331,8 +354,11 @@ instance (P : POG Var) : Fintype P.Gate := P.gateFintype
 instance (P : POG Var) : DecidableEq P.Gate := P.gateDecidableEq
 
 /-- Number of nodes. -/
-def size (P : POG Var) : ℕ :=
+def nodeCount (P : POG Var) : ℕ :=
   Fintype.card P.Gate
+
+/-- Graph size counts input references plus the signed output reference. -/
+def size (P : POG Var) : ℕ := (∑ g, (P.node g).fanIn) + 1
 
 /-- The function of the signed output reference. -/
 def Computes (P : POG Var) (f : (Var → Bool) → Prop) : Prop :=
@@ -532,7 +558,14 @@ noncomputable def toPOG (C : NNFCircuit Var) : POG Var where
   support := C.support
   support_eq := pog_support_eq C
 
-theorem toPOG_size (C : NNFCircuit Var) : C.toPOG.size = C.size := rfl
+theorem toPOG_size (C : NNFCircuit Var) : C.toPOG.size = C.size := by
+  change (∑ g : C.Gate, (pogNode C g).fanIn) + 1 = (∑ g, (C.node g).fanIn) + 1
+  congr 1
+  apply Finset.sum_congr rfl
+  intro g _
+  cases hg : C.node g <;> simp only [pogNode, hg, POGNode.fanIn, NNFNode.fanIn, List.length_cons, List.length_nil]
+  case disj children =>
+    cases children <;> simp
 
 theorem toPOG_computes (C : NNFCircuit Var) {f : (Var → Bool) → Prop}
     (h : C.Computes f) : C.toPOG.Computes f := by
@@ -600,7 +633,7 @@ end NNFCircuit
 section
 
 /-- The lower bound the corollary quotes: every DNNF for `¬L_n` has at least
-`spectralNodeLower n` nodes, which is `2^{Ω(n²)}`. -/
+size `spectralSizeLower n`, which is `2^{Ω(n²)}`. -/
 theorem exists_dD_circuit_and_POG_for_complement
     (n : ℕ) (hn : 0 < n) :
     ∃ ranks : LabelOrders n,
@@ -615,7 +648,7 @@ theorem exists_dD_circuit_and_POG_for_complement
       ∀ D : NNFCircuit.{0, 0} (Fin (encodedInputCount n)),
         D.IsDNNF →
         D.Computes (fun x ↦ ¬hardFunction ranks hn a x) →
-        spectralNodeLower n ≤ (D.size : ℝ) := by
+        spectralSizeLower n ≤ (D.size : ℝ) := by
   obtain ⟨ranks, a, C, hdet, hcomputes, hsize, hlower⟩ :=
     negation_separation n hn
   refine ⟨ranks, a, ⟨C.negateOutput, C.negateOutput_isDD hdet,
@@ -630,7 +663,7 @@ theorem exists_dD_circuit_and_POG_for_complement
 /-- No polynomial translation from d-D circuits, or from POGs, into DNNF:
 for every degree `d` and factor `M` there is a d-D circuit `C`, and a POG
 `P`, such that every DNNF for the same function has more than
-`M * size ^ d` gates.  Since d-DNNFs are DNNFs, the same holds against
+size greater than `M * size ^ d`.  Since d-DNNFs are DNNFs, the same holds against
 d-DNNF. -/
 theorem no_polynomial_translation_of_internal_negation (d M : ℕ) :
     ∃ (m : ℕ) (f : (Fin m → Bool) → Prop),
@@ -641,11 +674,11 @@ theorem no_polynomial_translation_of_internal_negation (d M : ℕ) :
         ∀ D : NNFCircuit.{0, 0} (Fin m), D.IsDNNF → D.Computes f →
           (M : ℝ) * (P.size : ℝ) ^ d < (D.size : ℝ)) := by
   obtain ⟨m, g, C, hdet, hcomputes, hCsize, hMm, hlow⟩ :=
-    exists_separation_at_padded_scale.{0} (d + 1) (M * 2 ^ d)
+    exists_separation_at_padded_scale_size.{0} (d + 1) (M * 2 ^ d)
   have hC : (C.size : ℝ) ≤ 2 * (m : ℝ) := by exact_mod_cast hCsize
   have hM : (M : ℝ) * 2 ^ d ≤ (m : ℝ) := by exact_mod_cast hMm
   have hm0 : (0 : ℝ) ≤ (m : ℝ) := by positivity
-  have hs1 : (1 : ℝ) ≤ (C.size : ℝ) := by exact_mod_cast circuit_size_pos C
+  have hs1 : (1 : ℝ) ≤ (C.size : ℝ) := by exact_mod_cast C.size_pos
   -- The common bound: `M * (2 * C.size) ^ d ≤ (2 m) ^ (d + 1)`.
   have hcommon : (M : ℝ) * (2 * (C.size : ℝ)) ^ d ≤ (2 * (m : ℝ)) ^ (d + 1) := by
     calc (M : ℝ) * (2 * (C.size : ℝ)) ^ d
@@ -685,7 +718,7 @@ theorem no_polynomial_translation_of_internal_negation (d M : ℕ) :
 /-- Internal negation: `¬L_n` has a d-D circuit and a
 POG of size `2^{O(n)}` (explicitly `positiveCircuitBound n + 2`, with
 `positiveCircuitBound n ≤ 2^{45 n}` for `n ≥ 13`), every DNNF for it has
-size at least `spectralNodeLower n`, which is `2^{Ω(n²)}`, and consequently
+size at least `spectralSizeLower n`, which is `2^{Ω(n²)}`, and consequently
 neither d-D circuits nor POGs translate into DNNF with polynomial overhead. -/
 @[tutorial_box "cor:paper-internal-negation"]
 theorem internal_negation_separation :
@@ -702,7 +735,7 @@ theorem internal_negation_separation :
         ∀ D : NNFCircuit.{0, 0} (Fin (encodedInputCount n)),
           D.IsDNNF →
           D.Computes (fun x ↦ ¬hardFunction ranks hn a x) →
-          spectralNodeLower n ≤ (D.size : ℝ)) ∧
+          spectralSizeLower n ≤ (D.size : ℝ)) ∧
     ∀ d M : ℕ,
       ∃ (m : ℕ) (f : (Fin m → Bool) → Prop),
         (∃ C : DDCircuit.{0, 0} (Fin m), C.IsDD ∧ C.Computes f ∧

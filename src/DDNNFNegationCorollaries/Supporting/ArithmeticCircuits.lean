@@ -1,4 +1,4 @@
-import DDNNFNegation.Circuit
+import DDNNFNegation.Prune
 import Mathlib.Algebra.MvPolynomial.Basic
 import Mathlib.Algebra.MvPolynomial.Eval
 import Mathlib.Algebra.MvPolynomial.Variables
@@ -53,6 +53,18 @@ def IsChild (child : Gate) : ArithNode V Gate → Prop
   | mul left right => child = left ∨ child = right
   | _ => False
 
+/-- Number of incoming edges. -/
+def fanIn : ArithNode V Gate → ℕ
+  | .add _ _ | .mul _ _ => 2
+  | _ => 0
+
+/-- Rename the children. -/
+def map {Gate' : Type*} (f : Gate → Gate') : ArithNode V Gate → ArithNode V Gate'
+  | .const c => .const c
+  | .var x => .var x
+  | .add l r => .add (f l) (f r)
+  | .mul l r => .mul (f l) (f r)
+
 end ArithNode
 
 /-- A finite shared arithmetic circuit over the indeterminates `V`, with real
@@ -82,8 +94,20 @@ instance (C : ArithCircuit V) : Fintype C.Gate := C.gateFintype
 instance (C : ArithCircuit V) : DecidableEq C.Gate := C.gateDecidableEq
 
 /-- Number of gates. -/
-def size (C : ArithCircuit V) : ℕ :=
+def nodeCount (C : ArithCircuit V) : ℕ :=
   Fintype.card C.Gate
+
+/-- Circuit size counts incoming edges and one output wire. -/
+def size (C : ArithCircuit V) : ℕ := (∑ g, (C.node g).fanIn) + 1
+
+/-- Binary arithmetic gates contribute at most two edges each. -/
+theorem size_le (C : ArithCircuit V) : C.size ≤ 2 * C.nodeCount + 1 := by
+  unfold size nodeCount
+  have h : (∑ g, (C.node g).fanIn) ≤ ∑ _g : C.Gate, 2 := by
+    apply Finset.sum_le_sum
+    intro g _
+    cases C.node g <;> simp [ArithNode.fanIn]
+  simpa [mul_comm] using Nat.add_le_add_right h 1
 
 /-- The polynomial computed at the output gate. -/
 def Computes (C : ArithCircuit V) (p : MvPolynomial V ℝ) : Prop :=
@@ -371,8 +395,8 @@ noncomputable def toDNNF (hmono : C.IsMonotone) : NNFCircuit (Fin N) where
         simp only [ArithNode.Vars, translateNode, NNFNode.Support,
           positions_union]
 
-@[simp] theorem toDNNF_size (hmono : C.IsMonotone) :
-    (C.toDNNF hmono).size = C.size := rfl
+@[simp] theorem toDNNF_nodeCount (hmono : C.IsMonotone) :
+    (C.toDNNF hmono).nodeCount = C.nodeCount := rfl
 
 theorem toDNNF_isDNNF (hmono : C.IsMonotone) (hdisj : C.IsPairDisjoint) :
     (C.toDNNF hmono).IsDNNF := by

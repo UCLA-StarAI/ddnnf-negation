@@ -61,31 +61,39 @@ def supportLocal [DecidableEq Var] (n : Node Var m)
 
 end Node
 
-/-- A circuit is an array of `size` nodes in topological order: every
+/-- A circuit is an array of `nodeCount` nodes in topological order: every
 child of the node at position `i` sits at a position below `i`.  One
 position is the output.  A node named as a child from several positions
 is shared. -/
 structure Circuit (Var : Type) where
-  size : ℕ
-  node : Fin size → Node Var size
+  nodeCount : ℕ
+  node : Fin nodeCount → Node Var nodeCount
   children_lt : ∀ i, ∀ j ∈ (node i).children, j < i
-  output : Fin size
+  output : Fin nodeCount
 
 namespace Circuit
 
 variable {Var : Type}
 
+/-- Number of edges: one for each child reference. -/
+def edgeCount (C : Circuit Var) : ℕ :=
+  ∑ i, (C.node i).children.card
+
+/-- Circuit size is the number of edges plus one, counting an output wire.
+In particular, a circuit consisting of one constant or literal has size one. -/
+def size (C : Circuit Var) : ℕ := C.edgeCount + 1
+
 /-- Truth value of the node at position `i` under the assignment `v`, by
 recursion on `i`.  The proof that `j` is a child lets `children_lt` certify
 that each recursive call goes to a smaller position. -/
-def eval (C : Circuit Var) (v : Var → Bool) (i : Fin C.size) : Bool :=
+def eval (C : Circuit Var) (v : Var → Bool) (i : Fin C.nodeCount) : Bool :=
   (C.node i).evalLocal v fun j ↦ C.eval v j.1
 termination_by i.val
 decreasing_by
   exact C.children_lt i j.1 j.2
 
 /-- Variables mentioned at or below position `i`, by the same recursion. -/
-def support [DecidableEq Var] (C : Circuit Var) (i : Fin C.size) :
+def support [DecidableEq Var] (C : Circuit Var) (i : Fin C.nodeCount) :
     Finset Var :=
   (C.node i).supportLocal fun j ↦ C.support j.1
 termination_by i.val
@@ -121,7 +129,7 @@ end Circuit
 
 /-- The claim.  For every exponent `d` and factor `M` there is a
 deterministic DNNF `C` over the variables `ℕ` such that every DNNF `D`
-computing the negation of `C` has more than `M * C.size ^ d` nodes. -/
+computing the negation of `C` has size greater than `M * C.size ^ d`. -/
 def NotClosedUnderNegation : Prop :=
   ∀ d M : ℕ,
     ∃ C : Circuit ℕ, C.IsDeterministicDNNF ∧

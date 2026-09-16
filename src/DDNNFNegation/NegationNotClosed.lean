@@ -1,6 +1,6 @@
 import DDNNFNegation.Separation
 import DDNNFNegation.CircuitOperations
-import DDNNFNegation.CircuitTransport
+import DDNNFNegation.CircuitCompaction
 import DDNNFNegation.Prune
 import TutorialBox
 
@@ -8,8 +8,8 @@ import TutorialBox
 # Polynomial nonclosure for concrete circuits
 
 For every polynomial degree `d` and multiplier `M`, construct a d-DNNF `C`
-such that every general DNNF for its negation has more than `M * C.size ^ d`
-nodes. The proof-side separation is transported to the array-indexed model
+such that every general DNNF for its negation has size greater than `M * C.size ^ d`,
+where size is the number of edges plus one. The proof-side separation is transported to the array-indexed model
 of `TrustBoundary.lean`. Padding absorbs the polynomial conversion costs;
 any extra variables in an adversarial circuit can be fixed to false.
 -/
@@ -25,12 +25,8 @@ theorem NNFCircuit.Computes.congr {Var : Type*} [DecidableEq Var]
     (h : C.Computes f) (hfg : ∀ v, f v ↔ g v) : C.Computes g :=
   fun v ↦ (h v).trans (hfg v)
 
-/-- **Renumbering the variables.**  A separation over an arbitrary finite
-variable type of cardinality `m` is a separation over `Fin m`, with the
-same circuit sizes and the same lower bound.  Both directions of the
-statement are carried along the numbering, the positive circuit forwards
-and the adversary circuit backwards. -/
-theorem exists_separation_over_fin.{u} {V : Type} [Fintype V] [DecidableEq V]
+/-- Renumbering variables preserves circuit size. -/
+theorem exists_separation_over_fin_size.{u} {V : Type} [Fintype V] [DecidableEq V]
     {m : ℕ} (hcard : Fintype.card V = m)
     (orig : (V → Bool) → Prop) (Cpad : NNFCircuit.{0, 0} V)
     (hdet : Cpad.IsDeterministicDNNF) (hcomputes : Cpad.Computes orig)
@@ -46,7 +42,7 @@ theorem exists_separation_over_fin.{u} {V : Type} [Fintype V] [DecidableEq V]
   let e : V ≃ Fin m := Fintype.equivFinOfCardEq hcard
   refine ⟨fun x ↦ orig (x ∘ e), ⟨Cpad.mapVariables e.toEmbedding,
     Cpad.mapVariables_isDeterministicDNNF _ hdet,
-    Cpad.mapVariables_computes _ hcomputes, hsize⟩, ?_⟩
+    Cpad.mapVariables_computes _ hcomputes, by simpa using hsize⟩, ?_⟩
   intro D hDNNF hD
   have hback : (D.mapVariables e.symm.toEmbedding).Computes
       (fun w ↦ ¬orig w) := by
@@ -57,15 +53,12 @@ theorem exists_separation_over_fin.{u} {V : Type} [Fintype V] [DecidableEq V]
       simp [e]
     simp only [Function.comp_def, Equiv.coe_toEmbedding]
     rw [show (fun v : V ↦ w (e.symm (e v))) = w from hcomp]
-  exact hlower _ (D.mapVariables_decomposable e.symm.toEmbedding hDNNF) hback
+  simpa using hlower _ (D.mapVariables_decomposable e.symm.toEmbedding hDNNF) hback
 
-/-- **The separation at the padded scale.**  Every quantity is measured in
-the number `m` of variables: the positive circuit has at most `2 m` gates,
-and every DNNF for the complement has more than `(2 m) ^ d`.  This is the
-shape the explicit construction produces, reached by choosing `n` large
-enough that `c · m ^ (κ log m)` exceeds `3 · (2 m) ^ (2 d)`, and then
-converting the edge bounds of the construction into gate bounds. -/
-theorem exists_separation_at_padded_scale.{u} (d M : ℕ) :
+/-- At a sufficiently large padded length `m`, the positive circuit has
+size at most `2*m` and every DNNF for its complement has size greater than
+`(2*m)^d`. Size is edges plus one throughout. -/
+theorem exists_separation_at_padded_scale_size.{u} (d M : ℕ) :
     ∃ (m : ℕ) (f : (Fin m → Bool) → Prop) (C : NNFCircuit.{0, 0} (Fin m)),
       C.IsDeterministicDNNF ∧ C.Computes f ∧ C.size ≤ 2 * m ∧ M ≤ m ∧
         ∀ D : NNFCircuit.{0, u} (Fin m), D.IsDNNF →
@@ -127,11 +120,11 @@ theorem exists_separation_at_padded_scale.{u} (d M : ℕ) :
   -- The witness: the positive circuit without its unreachable gates.
   have hprune_size : Cpad.prune.size ≤ 2 * m := by
     have hm1' : 1 ≤ m := by omega
-    calc Cpad.prune.size ≤ Cpad.prune.edgeCount + 1 := Cpad.prune_size_le
+    calc Cpad.prune.size ≤ Cpad.prune.edgeCount + 1 := le_rfl
       _ ≤ Cpad.edgeCount + 1 := Nat.add_le_add_right Cpad.edgeCount_prune_le 1
       _ ≤ m + 1 := Nat.add_le_add_right hedges 1
       _ ≤ 2 * m := by omega
-  -- The adversary bound in gate counts, through duplicate removal.
+  -- The edge lower bound directly bounds circuit size.
   have hgate : ∀ D : NNFCircuit.{0, u}
       (PaddedVar (encodedInputCount n) (exponentialPaddedLength n)),
       D.IsDNNF →
@@ -139,84 +132,91 @@ theorem exists_separation_at_padded_scale.{u} (d M : ℕ) :
         (by omega : 0 < n) a x) →
       (2 * (m : ℝ)) ^ d < (D.size : ℝ) := by
     intro D hDNNF hD
-    have hedge := hlower D.dedup (D.dedup_isDNNF hDNNF) (D.dedup_computes hD)
-    have hdedup : (D.dedup.edgeCount : ℝ) ≤
-        (D.size : ℝ) * ((D.size : ℝ) + 2) := by
-      exact_mod_cast D.edgeCount_dedup_le
-    have hspos : (1 : ℝ) ≤ (D.size : ℝ) := by exact_mod_cast circuit_size_pos D
-    have hsq : (D.size : ℝ) * ((D.size : ℝ) + 2) ≤ 3 * (D.size : ℝ) ^ 2 := by
-      nlinarith
+    have hedge := hlower D hDNNF hD
     have hstep : (m : ℝ) ^ (4 * (d : ℝ) + 1) ≤
         (m : ℝ) ^ (quasipolynomialRate * Real.log (m : ℝ)) :=
       Real.rpow_le_rpow_of_exponent_le hm1 hexp
     have hnat : (m : ℝ) ^ (4 * (d : ℝ) + 1) = (m : ℝ) ^ (4 * d) * (m : ℝ) := by
       rw [show (4 * (d : ℝ) + 1) = ((4 * d + 1 : ℕ) : ℝ) by push_cast; ring,
         Real.rpow_natCast, pow_succ]
-    have hpow : ((2 * (m : ℝ)) ^ d) ^ 2 ≤ (m : ℝ) ^ (4 * d) := by
-      calc ((2 * (m : ℝ)) ^ d) ^ 2 = (2 : ℝ) ^ (2 * d) * (m : ℝ) ^ (2 * d) := by
-            ring
-        _ ≤ (m : ℝ) ^ (2 * d) * (m : ℝ) ^ (2 * d) := by gcongr
-        _ = (m : ℝ) ^ (4 * d) := by ring
-    have hm4 : 0 < (m : ℝ) ^ (4 * d) := pow_pos (by linarith) _
-    have h23 : 2 ≤ quasipolynomialPrefactor * (m : ℝ) / 3 := by linarith
-    have key : ((2 * (m : ℝ)) ^ d) ^ 2 < (D.size : ℝ) ^ 2 := by
-      calc ((2 * (m : ℝ)) ^ d) ^ 2 ≤ (m : ℝ) ^ (4 * d) := hpow
-        _ < 2 * (m : ℝ) ^ (4 * d) := by linarith
-        _ ≤ (quasipolynomialPrefactor * (m : ℝ) / 3) * (m : ℝ) ^ (4 * d) :=
-          mul_le_mul_of_nonneg_right h23 hm4.le
-        _ = (quasipolynomialPrefactor / 3) * ((m : ℝ) ^ (4 * d) * (m : ℝ)) := by
-          ring
-        _ = (quasipolynomialPrefactor / 3) * (m : ℝ) ^ (4 * (d : ℝ) + 1) := by
-          rw [hnat]
-        _ ≤ (quasipolynomialPrefactor / 3) *
-            (m : ℝ) ^ (quasipolynomialRate * Real.log (m : ℝ)) :=
-          mul_le_mul_of_nonneg_left hstep (by positivity)
-        _ = (quasipolynomialPrefactor *
-            (m : ℝ) ^ (quasipolynomialRate * Real.log (m : ℝ))) / 3 := by
-          ring
-        _ ≤ (D.dedup.edgeCount : ℝ) / 3 := by linarith
-        _ ≤ (D.size : ℝ) * ((D.size : ℝ) + 2) / 3 := by linarith
-        _ ≤ (D.size : ℝ) ^ 2 := by linarith
-    have h2m : 0 ≤ (2 * (m : ℝ)) ^ d := by positivity
-    nlinarith [key, h2m, hspos]
+    have hpow : (2 * (m : ℝ)) ^ d ≤ (m : ℝ) ^ (4 * d) := by
+      calc (2 * (m : ℝ)) ^ d ≤ ((m : ℝ) * m) ^ d := by gcongr
+        _ = (m : ℝ) ^ (2 * d) := by ring
+        _ ≤ (m : ℝ) ^ (4 * d) := pow_le_pow_right₀ hm1 (by omega)
+    have hm4 : 0 < (m : ℝ) ^ (4 * d) := by positivity
+    calc (2 * (m : ℝ)) ^ d ≤ (m : ℝ) ^ (4 * d) := hpow
+      _ < (quasipolynomialPrefactor * (m : ℝ)) * (m : ℝ) ^ (4 * d) := by nlinarith
+      _ = quasipolynomialPrefactor * (m : ℝ) ^ (4 * (d : ℝ) + 1) := by rw [hnat]; ring
+      _ ≤ quasipolynomialPrefactor *
+          (m : ℝ) ^ (quasipolynomialRate * Real.log (m : ℝ)) :=
+        mul_le_mul_of_nonneg_left hstep hc.le
+      _ ≤ (D.edgeCount : ℝ) := hedge
+      _ ≤ (D.size : ℝ) := by unfold NNFCircuit.size; push_cast; linarith
   obtain ⟨f, ⟨C, hCdet, hCcomputes, hCsize⟩, hneg⟩ :=
-    exists_separation_over_fin.{u} hcard _ Cpad.prune
+    exists_separation_over_fin_size.{u} hcard _ Cpad.prune
       (Cpad.prune_isDeterministicDNNF hdet) (Cpad.prune_computes hcomputes)
       (2 * m) hprune_size _ hgate
   exact ⟨m, f, C, hCdet, hCcomputes, hCsize, hMm, hneg⟩
 
+/-- An auxiliary separation in stored node counts, derived from the size
+separation by pruning the witness and removing repeated adversary inputs. -/
+theorem exists_separation_at_padded_scale.{u} (d M : ℕ) :
+    ∃ (m : ℕ) (f : (Fin m → Bool) → Prop) (C : NNFCircuit.{0, 0} (Fin m)),
+      C.IsDeterministicDNNF ∧ C.Computes f ∧ C.nodeCount ≤ 2 * m ∧ M ≤ m ∧
+        ∀ D : NNFCircuit.{0, u} (Fin m), D.IsDNNF →
+          D.Computes (fun x ↦ ¬f x) → (2 * (m : ℝ)) ^ d < (D.nodeCount : ℝ) := by
+  obtain ⟨m, f, C, hdet, hf, hs, hM, hlower⟩ :=
+    exists_separation_at_padded_scale_size.{u} (2 * d + 2) (max M 1)
+  refine ⟨m, f, C.prune, C.prune_isDeterministicDNNF hdet,
+    C.prune_computes hf, C.prune_nodeCount_le_size.trans hs, (le_max_left _ _).trans hM, ?_⟩
+  intro D hD hDf
+  have hlow := hlower D.dedup (D.dedup_isDNNF hD) (D.dedup_computes hDf)
+  have he := D.edgeCount_dedup_le
+  have hp : 1 ≤ D.nodeCount := circuit_nodeCount_pos D
+  have hu : D.dedup.size ≤ 4 * D.nodeCount ^ 2 := by unfold NNFCircuit.size; nlinarith
+  have huR : (D.dedup.size : ℝ) ≤ 4 * (D.nodeCount : ℝ)^2 := by exact_mod_cast hu
+  have hm : (1 : ℝ) ≤ m := by exact_mod_cast (le_max_right M 1).trans hM
+  have hpR : 0 ≤ (D.nodeCount : ℝ) := by positivity
+  have hpow : 4 * ((2 * (m : ℝ)) ^ d)^2 ≤ (2 * (m : ℝ)) ^ (2 * d + 2) := by
+    rw [pow_add, show (2 * (m : ℝ)) ^ (2 * d) = ((2 * (m : ℝ)) ^ d)^2 by ring]
+    have hm2 : (4 : ℝ) ≤ (2 * (m : ℝ)) ^ 2 := by nlinarith
+    simpa only [mul_comm] using
+      mul_le_mul_of_nonneg_left hm2 (sq_nonneg ((2 * (m : ℝ)) ^ d))
+  have hbase : 0 ≤ (2 * (m : ℝ)) ^ d := by positivity
+  nlinarith
+
 /-- Finite-variable form of polynomial nonclosure, over `Fin m` with a
 real-valued bound. The countable-variable form over `ℕ` is derived below. -/
-def NotClosedUnderNegationOverFin.{u} : Prop :=
+def NotClosedUnderNegationOverFinNodeCount.{u} : Prop :=
   ∀ d M : ℕ,
     ∃ (m : ℕ) (f : (Fin m → Bool) → Prop)
       (C : NNFCircuit.{0, 0} (Fin m)),
       C.IsDeterministicDNNF ∧ C.Computes f ∧
         ∀ D : NNFCircuit.{0, u} (Fin m), D.IsDNNF →
           D.Computes (fun x ↦ ¬f x) →
-            (M : ℝ) * (C.size : ℝ) ^ d < (D.size : ℝ)
+            (M : ℝ) * (C.nodeCount : ℝ) ^ d < (D.nodeCount : ℝ)
 
 /-- The separation over `Fin m`.  The number of variables and the padding
 disappear into the proof: the positive circuit has at most `2 m` gates, so
 `M * s ^ d` with `s ≤ 2 m` and `M ≤ m` is at most `(2 m) ^ (d + 1)`, which
 `exists_separation_at_padded_scale` beats. -/
-theorem dDNNF_not_closed_under_negation_over_fin.{u} :
-    NotClosedUnderNegationOverFin.{u} := by
+theorem dDNNF_not_closed_under_negation_over_fin_nodeCount.{u} :
+    NotClosedUnderNegationOverFinNodeCount.{u} := by
   intro d M
   obtain ⟨m, f, C, hdet, hcomputes, hCsize, hMm, hlow⟩ :=
     exists_separation_at_padded_scale.{u} (d + 1) M
   refine ⟨m, f, C, hdet, hcomputes, ?_⟩
   intro D hDNNF hD
-  have hC : (C.size : ℝ) ≤ 2 * (m : ℝ) := by exact_mod_cast hCsize
+  have hC : (C.nodeCount : ℝ) ≤ 2 * (m : ℝ) := by exact_mod_cast hCsize
   have hM : (M : ℝ) ≤ (m : ℝ) := by exact_mod_cast hMm
   have hm0 : (0 : ℝ) ≤ (m : ℝ) := by positivity
   have hM' : (M : ℝ) ≤ 2 * (m : ℝ) := by linarith
-  calc (M : ℝ) * (C.size : ℝ) ^ d
+  calc (M : ℝ) * (C.nodeCount : ℝ) ^ d
       ≤ (2 * (m : ℝ)) * (2 * (m : ℝ)) ^ d :=
         mul_le_mul hM' (pow_le_pow_left₀ (by positivity) hC d)
           (by positivity) (by positivity)
     _ = (2 * (m : ℝ)) ^ (d + 1) := by rw [pow_succ]; ring
-    _ < (D.size : ℝ) := hlow D hDNNF hD
+    _ < (D.nodeCount : ℝ) := hlow D hDNNF hD
 
 /-- Splitting the variable supply at `m`: the first `m` variables map into
 `Fin m` and the rest keep their names. -/
@@ -238,16 +238,16 @@ def natSplitAt (m : ℕ) : ℕ ↪ Fin m ⊕ ℕ where
         exact Sum.inr.inj hab
 
 /-- **d-DNNF is not polynomially closed under negation**, the claim stated as
-`NotClosedUnderNegationNNFCircuit` in `Circuit.lean`, over the countable
+`NotClosedUnderNegationNNFNodeCount` in `Circuit.lean`, over the countable
 variable supply.  The witness is the `Fin m` witness with its variables
 renumbered into `ℕ`.  An adversary `D` over `ℕ` may mention variables
 the witness never uses; fixing every variable from `m` on to `false` and
 renaming the rest turns it into an adversary over `Fin m` with the same
 number of gates, which the bound over `Fin m` defeats. -/
-theorem dDNNF_not_closed_under_negation_nnfCircuit.{u} : NotClosedUnderNegationNNFCircuit.{u} := by
+theorem dDNNF_not_closed_under_negation_nnfNodeCount.{u} : NotClosedUnderNegationNNFNodeCount.{u} := by
   intro d M
   obtain ⟨m, f, C, hdet, hcomputes, hlow⟩ :=
-    dDNNF_not_closed_under_negation_over_fin.{u} d M
+    dDNNF_not_closed_under_negation_over_fin_nodeCount.{u} d M
   refine ⟨C.mapVariables Fin.valEmbedding,
     C.mapVariables_isDeterministicDNNF _ hdet, ?_⟩
   intro D hDNNF hDneg
@@ -278,22 +278,25 @@ theorem dDNNF_not_closed_under_negation_nnfCircuit.{u} : NotClosedUnderNegationN
       fixed (D.mapVariables_decomposable (natSplitAt m) hDNNF)) hD'
   -- Both transports keep the gate type, so both sizes are unchanged.
   have hDsize : ((D.mapVariables (natSplitAt m)).restrictRightVariables
-      fixed).size = D.size := rfl
+      fixed).nodeCount = D.nodeCount := rfl
   rw [hDsize] at hbound
-  simp only [NNFCircuit.mapVariables_size]
+  simp only [NNFCircuit.mapVariables_nodeCount]
   exact_mod_cast hbound
 
-/-- **d-DNNF is not polynomially closed under negation**: the claim
-`NotClosedUnderNegation` stated in `TrustBoundary.lean` over array-indexed
-circuits.  The witness is the shared-gate witness above with its gates
+/-- Auxiliary polynomial nonclosure in stored node counts over
+array-indexed circuits.  The witness is the shared-gate witness above with its gates
 listed in order of increasing rank.  An adversary array circuit is read
 as a binary shared-gate circuit.  An unbounded conjunction is replaced by
-a prefix chain, giving exactly `size * (size + 1)` binary gates.  The
+a prefix chain, giving exactly `nodeCount * (nodeCount + 1)` binary gates.  The
 quasipolynomial separation absorbs this quadratic expansion. -/
-theorem dDNNF_not_closed_under_negation : NotClosedUnderNegation := by
+theorem dDNNF_not_closed_under_negation_nodes :
+    ∀ d M : ℕ, ∃ C : Circuit ℕ, C.IsDeterministicDNNF ∧
+      ∀ D : Circuit ℕ, D.IsDNNF →
+        D.Computes (fun v ↦ !C.eval v C.output) →
+          M * C.nodeCount ^ d < D.nodeCount := by
   intro d M
   obtain ⟨C, hdet, hbound⟩ :=
-    dDNNF_not_closed_under_negation_nnfCircuit.{0} (2 * d + 2) ((M + 1) ^ 2)
+    dDNNF_not_closed_under_negation_nnfNodeCount.{0} (2 * d + 2) ((M + 1) ^ 2)
   refine ⟨C.toCircuit, C.isDeterministicDNNF_toCircuit hdet, ?_⟩
   intro D hD hDneg
   -- Expand `D` to a binary shared-gate circuit.  It computes the same
@@ -308,39 +311,55 @@ theorem dDNNF_not_closed_under_negation : NotClosedUnderNegation := by
     simp
   have hlt := hbound D.toBinaryNNFCircuit
     (D.isDNNF_toBinaryNNFCircuit hD) hneg
-  rw [D.size_toBinaryNNFCircuit] at hlt
-  change M * C.size ^ d < D.size
+  rw [D.nodeCount_toBinaryNNFCircuit] at hlt
+  change M * C.nodeCount ^ d < D.nodeCount
   by_contra hnot
-  have hDle : D.size ≤ M * C.size ^ d := Nat.le_of_not_gt hnot
-  have hspos : 0 < C.size := Fintype.card_pos_iff.mpr ⟨C.output⟩
-  have hsone : 1 ≤ C.size := hspos
-  have hpownext : C.size ^ d ≤ C.size ^ (d + 1) :=
+  have hDle : D.nodeCount ≤ M * C.nodeCount ^ d := Nat.le_of_not_gt hnot
+  have hspos : 0 < C.nodeCount := Fintype.card_pos_iff.mpr ⟨C.output⟩
+  have hsone : 1 ≤ C.nodeCount := hspos
+  have hpownext : C.nodeCount ^ d ≤ C.nodeCount ^ (d + 1) :=
     Nat.pow_le_pow_right hsone (by omega)
-  have honepow : 1 ≤ C.size ^ (d + 1) := one_le_pow₀ hsone
-  let B := (M + 1) * C.size ^ (d + 1)
-  have hDB : D.size ≤ B := by
+  have honepow : 1 ≤ C.nodeCount ^ (d + 1) := one_le_pow₀ hsone
+  let B := (M + 1) * C.nodeCount ^ (d + 1)
+  have hDB : D.nodeCount ≤ B := by
     calc
-      D.size ≤ M * C.size ^ d := hDle
-      _ ≤ M * C.size ^ (d + 1) := Nat.mul_le_mul_left M hpownext
-      _ ≤ (M + 1) * C.size ^ (d + 1) :=
+      D.nodeCount ≤ M * C.nodeCount ^ d := hDle
+      _ ≤ M * C.nodeCount ^ (d + 1) := Nat.mul_le_mul_left M hpownext
+      _ ≤ (M + 1) * C.nodeCount ^ (d + 1) :=
         Nat.mul_le_mul_right _ (Nat.le_succ M)
       _ = B := rfl
-  have hDsuccB : D.size + 1 ≤ B := by
+  have hDsuccB : D.nodeCount + 1 ≤ B := by
     calc
-      D.size + 1 ≤ M * C.size ^ d + 1 := Nat.add_le_add_right hDle 1
-      _ ≤ M * C.size ^ (d + 1) + C.size ^ (d + 1) :=
+      D.nodeCount + 1 ≤ M * C.nodeCount ^ d + 1 := Nat.add_le_add_right hDle 1
+      _ ≤ M * C.nodeCount ^ (d + 1) + C.nodeCount ^ (d + 1) :=
         Nat.add_le_add
           (Nat.mul_le_mul_left M hpownext) honepow
       _ = B := by dsimp [B]; ring
-  have hupper : D.size * (D.size + 1) ≤
-      (M + 1) ^ 2 * C.size ^ (2 * d + 2) := by
+  have hupper : D.nodeCount * (D.nodeCount + 1) ≤
+      (M + 1) ^ 2 * C.nodeCount ^ (2 * d + 2) := by
     calc
-      D.size * (D.size + 1) ≤ B * B := Nat.mul_le_mul hDB hDsuccB
-      _ = (M + 1) ^ 2 * C.size ^ (2 * d + 2) := by
+      D.nodeCount * (D.nodeCount + 1) ≤ B * B := Nat.mul_le_mul hDB hDsuccB
+      _ = (M + 1) ^ 2 * C.nodeCount ^ (2 * d + 2) := by
         dsimp [B]
         rw [show 2 * d + 2 = (d + 1) + (d + 1) by omega, pow_add]
         ring
   omega
+
+/-- Polynomial nonclosure with circuit size defined as edges plus one.
+The node-count separation supplies a witness; compacting the adversary
+bounds its retained nodes by its size, including the zero-edge case. -/
+theorem dDNNF_not_closed_under_negation : NotClosedUnderNegation := by
+  intro d M
+  obtain ⟨C, hC, hlower⟩ :=
+    dDNNF_not_closed_under_negation_nodes (2 * d) (M * 2 ^ d)
+  refine ⟨C, hC, ?_⟩
+  intro D hD hneg
+  have hlow := hlower D.compact (D.compact_isDNNF hD) (D.compact_computes hneg)
+  calc M * C.size ^ d ≤ M * (2 * C.nodeCount ^ 2) ^ d :=
+        Nat.mul_le_mul_left M (Nat.pow_le_pow_left C.size_le_two_mul_nodeCount_sq d)
+    _ = (M * 2 ^ d) * C.nodeCount ^ (2 * d) := by rw [mul_pow, pow_mul]; ring
+    _ < D.compact.nodeCount := hlow
+    _ ≤ D.size := D.nodeCount_compact_le_size
 
 end
 

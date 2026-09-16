@@ -10,8 +10,8 @@ inputs. The structure stores semantics and syntactic supports together with
 their local equations; `semantics_unique` and `support_unique` show that
 these equations determine them.
 
-Size counts nodes. Internal edge counts are used in the rectangle-cover
-argument. `CircuitTransport.lean` connects this model to the concrete
+Size is the number of edges plus one. The separate `nodeCount` records
+the number of stored gates. `CircuitTransport.lean` connects this model to the concrete
 array-indexed circuits in `TrustBoundary.lean`.
 -/
 
@@ -104,16 +104,18 @@ instance {Var : Type*} [DecidableEq Var] (C : NNFCircuit Var) :
 instance {Var : Type*} [DecidableEq Var] (C : NNFCircuit Var) :
     DecidableEq C.Gate := C.gateDecidableEq
 
-/-- Number of shared gates. -/
-@[tutorial_box "def:tutorial-circuits"]
-def size {Var : Type*} [DecidableEq Var] (C : NNFCircuit Var) : ℕ :=
+/-- Number of stored shared gates, including unused gates. -/
+def nodeCount {Var : Type*} [DecidableEq Var] (C : NNFCircuit Var) : ℕ :=
   Fintype.card C.Gate
 
-/-- Number of edges, the sum of the fan-ins of the gates. Internal
-construction bounds use this measure; the tutorial counts nodes with
-`size`. -/
+/-- Number of edges, the sum of the fan-ins of the gates. -/
 def edgeCount {Var : Type*} [DecidableEq Var] (C : NNFCircuit Var) : ℕ :=
   ∑ gate, (C.node gate).fanIn
+
+/-- Circuit size is the number of edges plus one, counting an output wire. -/
+@[tutorial_box "def:tutorial-circuits"]
+def size {Var : Type*} [DecidableEq Var] (C : NNFCircuit Var) : ℕ :=
+  C.edgeCount + 1
 
 /-- Every disjunction has at most two inputs; a conjunction always has
 exactly two. -/
@@ -121,10 +123,10 @@ def IsFanInTwo {Var : Type*} [DecidableEq Var] (C : NNFCircuit Var) : Prop :=
   ∀ gate children, C.node gate = .disj children → children.length ≤ 2
 
 /-- A fan-in-two circuit has at most two edges per gate. -/
-theorem edgeCount_le_two_mul_size {Var : Type*} [DecidableEq Var]
+theorem edgeCount_le_two_mul_nodeCount {Var : Type*} [DecidableEq Var]
     (C : NNFCircuit Var) (hfan : C.IsFanInTwo) :
-    C.edgeCount ≤ 2 * C.size := by
-  unfold edgeCount size
+    C.edgeCount ≤ 2 * C.nodeCount := by
+  unfold edgeCount nodeCount
   calc ∑ gate, (C.node gate).fanIn ≤ ∑ _gate : C.Gate, 2 := by
         apply Finset.sum_le_sum
         intro gate _
@@ -173,15 +175,15 @@ end NNFCircuit
 
 /-- No polynomial bounds negation in this model: for every degree `d` and
 multiplier `M`, there is a d-DNNF `C` such that every DNNF for its negation
-has more than `M * C.size ^ d` nodes. The adversary may use additional
+has more than `M * C.nodeCount ^ d` nodes. The adversary may use additional
 variables and any finite gate type. -/
-def NotClosedUnderNegationNNFCircuit.{u} : Prop :=
+def NotClosedUnderNegationNNFNodeCount.{u} : Prop :=
   ∀ d M : ℕ,
     ∃ C : NNFCircuit.{0, 0} ℕ,
       C.IsDeterministicDNNF ∧
         ∀ D : NNFCircuit.{0, u} ℕ, D.IsDNNF →
           D.Computes (fun v ↦ ¬ C.semantics C.output v) →
-            M * C.size ^ d < D.size
+            M * C.nodeCount ^ d < D.nodeCount
 
 namespace NNFNode
 

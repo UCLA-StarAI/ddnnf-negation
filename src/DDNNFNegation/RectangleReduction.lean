@@ -5,9 +5,9 @@ import TutorialBox
 /-!
 # From a DNNF to a balanced rectangle cover
 
-The internal cover bound is stated in terms of edges. Deduplicating inputs
-and pruning relate this to the number of nodes, yielding the paper's
-quadratic node-count bound `balanced_rectangle_cover`.
+Circuit size is the number of edges plus one. Binarization and pruning
+yield the linear bound `balanced_rectangle_cover`. Auxiliary node-count bounds live
+in `NodeCountBounds.lean`.
 -/
 
 namespace DDNNFNegation
@@ -33,9 +33,7 @@ theorem hardFunction_rectangle_cover
     omega
   exact D.rectangle_cover hVar hDNNF hDcomputes
 
-/-- A DNNF with unrestricted fan-in has a balanced rectangle cover
-quadratic in its number of nodes. Repeated inputs in the internal circuit
-model are removed before converting to binary gates. -/
+/-- A DNNF of size `s` has a balanced rectangle cover with at most `2*s` members. -/
 @[tutorial_box "lem:tutorial-edge-cover"]
 theorem balanced_rectangle_cover
     {n : ℕ} (ranks : LabelOrders n) (hn : 0 < n)
@@ -43,14 +41,8 @@ theorem balanced_rectangle_cover
     (D : NNFCircuit.{0, 0} (Fin (encodedInputCount n)))
     (hDNNF : D.IsDNNF) (hDcomputes : D.Computes (fun x ↦ ¬hardFunction ranks hn a x)) :
     ∃ (r : ℕ) (_ : BalancedRectangleCover (fun x ↦ ¬hardFunction ranks hn a x) (Fin r)),
-      r ≤ 7 * D.size ^ 2 := by
-  obtain ⟨r, cover, hr⟩ := hardFunction_rectangle_cover ranks hn a D.dedup
-    (D.dedup_isDNNF hDNNF) (D.dedup_computes hDcomputes)
-  refine ⟨r, cover, ?_⟩
-  have hsize : 1 ≤ D.size := by
-    change 0 < Fintype.card D.Gate
-    exact Fintype.card_pos_iff.mpr ⟨D.output⟩
-  have he := D.edgeCount_dedup_le
-  nlinarith
+      r ≤ 2 * D.size := by
+  obtain ⟨r, cover, hr⟩ := hardFunction_rectangle_cover ranks hn a D hDNNF hDcomputes
+  exact ⟨r, cover, by unfold NNFCircuit.size; omega⟩
 
 end DDNNFNegation

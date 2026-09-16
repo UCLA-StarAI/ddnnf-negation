@@ -554,13 +554,13 @@ private theorem closureRounds_le (Nonterminal : Type*) [Fintype Nonterminal]
 
 theorem closureIntervalCircuit_size_le {N : ℕ}
     (G : ExtendedBinaryCFG Nonterminal) :
-    (closureIntervalCircuit (N := N) G).size ≤
+    (closureIntervalCircuit (N := N) G).nodeCount ≤
       1 + 2 * N +
         (Fintype.card Nonterminal * (N + 1) ^ 2) *
           Fintype.card Nonterminal ^ 3 * (N + 1) ^ 3 +
         (Fintype.card Nonterminal * (N + 1) ^ 2 + 1) *
           Fintype.card Nonterminal * (N + 1) ^ 2 := by
-  rw [closureIntervalCircuit, AcyclicNNFDescription.toCircuit_size]
+  rw [closureIntervalCircuit, AcyclicNNFDescription.toCircuit_nodeCount]
   apply (closureParserGate_card_le Nonterminal N
     (closureRounds Nonterminal N)).trans
   have hrounds := closureRounds_le Nonterminal N

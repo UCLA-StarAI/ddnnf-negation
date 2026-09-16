@@ -7,7 +7,7 @@ Deduplicating disjunction inputs preserves the function and the circuit's
 nodes. The resulting graph has a quadratic bound on its number of edges
 in terms of its node count. Local support and rank lemmas justify the
 transformation, and node-edge comparisons connect the internal edge-count
-rectangle cover to the paper's node-count bound.
+rectangle cover to auxiliary node-count bounds.
 -/
 
 namespace DDNNFNegation
@@ -224,9 +224,9 @@ theorem fanIn_le_edgeCount (C : NNFCircuit Var) (gate : C.Gate) :
 at most one more gate than edges: the tutorial's "every gate other than the
 output has an outgoing edge, so the number of gates is at most the number of
 edges plus one". -/
-theorem size_le_edgeCount_add_one (C : NNFCircuit Var)
+theorem nodeCount_le_edgeCount_add_one (C : NNFCircuit Var)
     (h : ∀ gate, gate ≠ C.output → ∃ parent, (C.node parent).IsChild gate) :
-    C.size ≤ C.edgeCount + 1 := by
+    C.nodeCount ≤ C.edgeCount + 1 := by
   have hsub : (univ : Finset C.Gate) ⊆
       insert C.output
         (univ.biUnion fun parent ↦ (C.node parent).childList.toFinset) := by
@@ -239,7 +239,7 @@ theorem size_le_edgeCount_add_one (C : NNFCircuit Var)
       rw [mem_biUnion]
       exact ⟨parent, mem_univ _, List.mem_toFinset.mpr
         ((NNFNode.isChild_iff_mem_childList _ _).mp hparent)⟩
-  calc C.size = (univ : Finset C.Gate).card := Finset.card_univ.symm
+  calc C.nodeCount = (univ : Finset C.Gate).card := Finset.card_univ.symm
     _ ≤ (insert C.output
           (univ.biUnion fun parent ↦ (C.node parent).childList.toFinset)).card :=
         card_le_card hsub
@@ -385,11 +385,17 @@ theorem edgeCount_padRightVariables {Extra : Type*} [DecidableEq Extra]
     (C.padRightVariables (Extra := Extra)).edgeCount = C.edgeCount :=
   edgeCount_mapVariables C _
 
+/-- Relabeling variables preserves edges-plus-one size. -/
+@[simp] theorem size_mapVariables {Var' : Type*} [DecidableEq Var']
+    (C : NNFCircuit Var) (e : Var ↪ Var') :
+    (C.mapVariables e).size = C.size := by
+  simp only [size, edgeCount_mapVariables]
+
 /-! ### Removing repeated inputs -/
 
 /-- The circuit with the repeated inputs of every disjunction removed.  The
 gates, the function computed at each gate, and the supports are unchanged;
-each gate now has at most `size + 2` inputs. -/
+each gate now has at most `nodeCount + 2` inputs. -/
 def dedup (C : NNFCircuit Var) : NNFCircuit Var :=
   ofNodes (fun gate ↦ (C.node gate).dedup) C.rank
     (fun gate child hchild ↦
@@ -432,15 +438,15 @@ theorem dedup_isDecomposable (C : NNFCircuit Var) (h : C.IsDecomposable) :
 theorem dedup_isDNNF (C : NNFCircuit Var) (h : C.IsDNNF) : C.dedup.IsDNNF :=
   C.dedup_isDecomposable h
 
-/-- Removing duplicate inputs cannot increase the circuit's total edge count. -/
+/-- After removing repeated inputs, the edge count is bounded quadratically in stored nodes. -/
 theorem edgeCount_dedup_le (C : NNFCircuit Var) :
-    C.dedup.edgeCount ≤ C.size * (C.size + 2) := by
+    C.dedup.edgeCount ≤ C.nodeCount * (C.nodeCount + 2) := by
   unfold edgeCount
   change ∑ gate : C.Gate, ((C.node gate).dedup).fanIn ≤ _
   calc ∑ gate : C.Gate, ((C.node gate).dedup).fanIn
       ≤ ∑ _gate : C.Gate, (Fintype.card C.Gate + 2) :=
         Finset.sum_le_sum fun gate _ ↦ NNFNode.fanIn_dedup_le _
-    _ = C.size * (C.size + 2) := by
+    _ = C.nodeCount * (C.nodeCount + 2) := by
         rw [Finset.sum_const, Finset.card_univ, smul_eq_mul]
         rfl
 

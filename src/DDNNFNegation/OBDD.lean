@@ -317,9 +317,9 @@ theorem toNNFCircuit_isDeterministicDNNF (B : ReadOnceOBDD Var) :
   ⟨B.toNNFCircuit_decomposable, B.toNNFCircuit_deterministic⟩
 
 /-- The expansion uses exactly five gate roles per original shared node. -/
-theorem toNNFCircuit_size (B : ReadOnceOBDD Var) :
-    B.toNNFCircuit.size = 5 * B.size := by
-  rw [NNFCircuit.size, ReadOnceOBDD.size]
+theorem toNNFCircuit_nodeCount (B : ReadOnceOBDD Var) :
+    B.toNNFCircuit.nodeCount = 5 * B.size := by
+  rw [NNFCircuit.nodeCount, ReadOnceOBDD.size]
   change Fintype.card (ExpansionKind × B.Gate) =
     5 * Fintype.card B.Gate
   rw [Fintype.card_prod, Fintype.card_congr expansionKindEquiv,
@@ -340,10 +340,10 @@ theorem toNNFCircuit_isFanInTwo (B : ReadOnceOBDD Var) :
 "constant number of edges per decision node". -/
 theorem toNNFCircuit_edgeCount_le (B : ReadOnceOBDD Var) :
     B.toNNFCircuit.edgeCount ≤ 10 * B.size := by
-  calc B.toNNFCircuit.edgeCount ≤ 2 * B.toNNFCircuit.size :=
-        B.toNNFCircuit.edgeCount_le_two_mul_size B.toNNFCircuit_isFanInTwo
+  calc B.toNNFCircuit.edgeCount ≤ 2 * B.toNNFCircuit.nodeCount :=
+        B.toNNFCircuit.edgeCount_le_two_mul_nodeCount B.toNNFCircuit_isFanInTwo
     _ = 10 * B.size := by
-        rw [toNNFCircuit_size]
+        rw [toNNFCircuit_nodeCount]
         ring
 
 end ReadOnceOBDD
